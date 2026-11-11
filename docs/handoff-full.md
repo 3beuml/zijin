@@ -182,3 +182,22 @@ node scripts/accept.mjs dump.json
   ①导出在安卓上不依赖下载 API（WebView 里 blob 下载不可靠），优先走系统分享面板；
   ②应用内打印在安卓 WebView 里能否调起系统打印服务未验证（阶段 5 真机再说），
   所以 A4 主路径做成了「独立 HTML 文件」，打印不依赖 WebView 的打印桥。
+
+## 阶段 5 完成
+- 实际做了什么：安装 `@capacitor/android@7`（与 core/cli 同大版本）→ `npx cap add android`
+  （包名 `io.github.beuml.zijin`，应用名「子衿」）→ `npx cap sync` → `assembleDebug`，
+  versionName 设为 0.1.0。产出 `android/app/build/outputs/apk/debug/app-debug.apk`（4.4MB），
+  已复制到仓库根 `子衿-v0.1-debug.apk` 交付（`.gitignore` 已排除 *.apk 与 android 构建产物，
+  android/ 工程源文件进仓库）。
+- 闸门结果：`npx cap sync` 无错（copy/update 全 √）；`assembleDebug` 成功出 APK；
+  aapt 验签：package `io.github.beuml.zijin`，minSdk 23 / targetSdk 35。
+  最终闸门复查：72 单测全绿 + build 通过 + accept.mjs 7/7。
+- 与原计划的偏差：
+  ①`@capacitor/android` 最新是 v8、要求 core@8，与阶段 0 锁的 core@7 冲突（ERESOLVE）——
+  装了 android@7 对齐，没有整体升 8（升级属于「改包名/依赖结构」，按规矩先不动）。
+  ②本机网络对 services.gradle.org 的 SSL 连接反复失败（wrapper 下载 8.11.1 一直断流）——
+  wrapper 改指本机已缓存的 **Gradle 8.9**（AGP 8.7 允许），构建不再需要外网下载分发。
+  ③`local.properties` 的 sdk.dir 用单反斜杠在 Java properties 里是非法转义
+  （「文件名、目录名或卷标语法不正确」），改用正斜杠 `C:/Users/...` 解决。
+  ④APK 带 INTERNET 权限（Capacitor 模板默认）；本应用实际不联网，
+  正式签名版可以考虑去掉——留给下一个任务。

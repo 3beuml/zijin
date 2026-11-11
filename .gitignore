@@ -20,3 +20,11 @@ desktop.ini
 
 # 注意：reference/samples/ 下的 xlsx 是**虚构样例**，必须提交
 # 注意：真实成绩表、花名册一律不许进本仓库
+
+# APK 产物只本地交付，不进仓库
+*.apk
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/capacitor-cordova-android-plugins/
