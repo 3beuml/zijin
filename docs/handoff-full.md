@@ -93,3 +93,13 @@ node scripts/accept.mjs dump.json
 做完阶段 3 就是「能用」，阶段 5 只是「能装」。
 
 早上交付时，明确写清楚做到了第几段、哪段没做完、为什么。
+
+## 阶段 0 完成
+- 实际做了什么：手工脚手架（不用 `npm create vite` 交互式向导）——`package.json`、
+  `vite.config.ts`（含 vitest 配置、`base:'./'` 以适配 Capacitor file://）、
+  `tsconfig.json`（strict）、`capacitor.config.ts`（appId `io.github.beuml.zijin`）、
+  `index.html`、`src/main.tsx`、`src/App.tsx`、`src/styles.css`（design-ui.md 的全部 CSS 令牌先行落位）。
+  依赖：react 18 / vite 5 / vitest 2 / typescript 5 / @capacitor/core+cli 7（@capacitor/android 留到阶段 5）。
+- 闸门结果：`npm run build` → 成功（tsc + vite，333ms）；`vite preview` → HTTP 200，页面标题「子衿」正常返回。
+- 与原计划的偏差：环境里 esbuild 的 postinstall 被 allow-scripts 拦截，需 `npm approve-scripts esbuild`
+  后手动执行 `node node_modules/esbuild/install.js`——换机器复现时注意这一步。无其它偏差。

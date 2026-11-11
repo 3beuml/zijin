@@ -1,0 +1,91 @@
+/* 子衿 · 界面令牌（docs/design-ui.md） */
+:root {
+  /* 品牌：靛青，取自「青衿」 */
+  --indigo-700: #2c4a63;
+  --indigo-500: #456b85;
+  --indigo-100: #e4ebf0;
+
+  /* 纸面 */
+  --paper: #fbf9f5;
+  --surface: #ffffff;
+  --line: #e7e2d9;
+
+  /* 文字 */
+  --ink-900: #1f2328;
+  --ink-600: #5c6166;
+  --ink-400: #8c9196;
+
+  /* 语义：只表达「时间与风险」 */
+  --success: #2f7d5a;
+  --warning: #b4731f;
+  --danger: #a8433a;
+
+  /* 排版 */
+  --font-cn: system-ui, 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  --font-num: 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, monospace;
+
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-md: 16px;
+  --text-lg: 20px;
+  --text-xl: 24px;
+
+  --lh-body: 1.6;
+  --lh-list: 1.4;
+  --lh-heading: 1.25;
+
+  /* 间距与形状 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --radius-control: 6px;
+  --radius-card: 10px;
+
+  --row-standard: 56px;
+  --row-compact: 48px;
+  --touch-min: 48px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-cn);
+  font-size: var(--text-md);
+  line-height: var(--lh-body);
+  color: var(--ink-900);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 数字一律等宽 + 右对齐 */
+.num {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.page {
+  padding: var(--space-4);
+}
+
+.page-title {
+  font-size: var(--text-xl);
+  line-height: var(--lh-heading);
+  margin: 0 0 var(--space-3);
+}
+
+.placeholder {
+  color: var(--ink-400);
+}
