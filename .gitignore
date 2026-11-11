@@ -1,0 +1,22 @@
+# 依赖与产物
+node_modules/
+dist/
+build/
+coverage/
+*.log
+
+# 本地环境
+.env
+.env.local
+.local
+
+# 运行日志（夜间任务输出）
+.run/
+
+# 系统
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# 注意：reference/samples/ 下的 xlsx 是**虚构样例**，必须提交
+# 注意：真实成绩表、花名册一律不许进本仓库
