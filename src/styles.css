@@ -550,3 +550,73 @@ li:last-child > .row {
 .subject-input {
   width: 64px;
 }
+
+.btn-row {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.week-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.print-only {
+  display: none;
+}
+
+/* ---- A4 打印（design-ui：页边距 ≥15mm、10.5pt 正文、去背景、藏导航）---- */
+@media print {
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+
+  html,
+  body {
+    background: #fff;
+    font-size: 10.5pt;
+  }
+
+  .tabbar,
+  .search,
+  .btn,
+  .back,
+  .week-nav,
+  .week-actions,
+  .record-form,
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block;
+  }
+
+  .print-head {
+    font-size: 13pt;
+    font-weight: 600;
+    margin-bottom: 6mm;
+  }
+
+  .page {
+    padding: 0;
+  }
+
+  .card,
+  .list {
+    border-color: #bbb;
+    box-shadow: none;
+  }
+
+  .row-side.warn,
+  .delta.down {
+    color: #8a5a13;
+  }
+
+  .coverage-num {
+    font-size: 16pt;
+  }
+}

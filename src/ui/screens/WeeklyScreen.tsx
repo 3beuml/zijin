@@ -1,8 +1,9 @@
-/** 周手册：本周覆盖概览 + 未覆盖名单（打印样式在阶段 4 加） */
+/** 周手册：本周覆盖概览 + 未覆盖名单 + A4 打印 / HTML 导出 */
 import { useMemo, useState } from 'react';
 import type { AppData } from '../../domain/types.ts';
 import { weeklySummary } from '../../domain/weekly.ts';
 import { shortDate, shiftDate, todayStr } from '../util.ts';
+import { buildWeeklyHtml, shareOrDownloadHtml } from '../print.ts';
 
 export function WeeklyScreen({
   data,
@@ -16,8 +17,16 @@ export function WeeklyScreen({
 
   const weekRecords = data.records.filter((r) => r.date >= week.start && r.date <= week.end);
 
+  const exportHtml = async () => {
+    const html = buildWeeklyHtml(data, refDate);
+    await shareOrDownloadHtml(html, `子衿周手册-${week.start}.html`);
+  };
+
   return (
     <div className="page">
+      <div className="print-only print-head">
+        周手册（{shortDate(week.start)} – {shortDate(week.end)}）· 学生 {week.total} 人 · 已沟通 {week.covered}
+      </div>
       <h1 className="page-title">周手册</h1>
       <div className="week-nav">
         <button className="btn ghost" onClick={() => setRefDate(shiftDate(refDate, -7))}>
@@ -28,6 +37,14 @@ export function WeeklyScreen({
         </span>
         <button className="btn ghost" onClick={() => setRefDate(shiftDate(refDate, 7))}>
           下周 ›
+        </button>
+      </div>
+      <div className="week-actions no-print">
+        <button className="btn" onClick={() => window.print()}>
+          打印
+        </button>
+        <button className="btn primary" onClick={exportHtml}>
+          导出 A4 周手册
         </button>
       </div>
 

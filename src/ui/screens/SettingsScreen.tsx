@@ -9,6 +9,8 @@ import { detect } from '../../domain/import/detect.ts';
 import { map } from '../../domain/import/map.ts';
 import { commit } from '../../domain/import/commit.ts';
 import type { ImportMapping, SketchRole } from '../../domain/import/types.ts';
+import { downloadFile } from '../print.ts';
+import { todayStr } from '../util.ts';
 
 const ROLES: SketchRole[] = [
   'student.name', 'student.class', 'exam.total', 'exam.rank',
@@ -151,7 +153,9 @@ export function SettingsScreen({
 
           <section className="card">
             <h2 className="card-title">备份</h2>
-            <p className="muted">从备份 JSON 恢复（覆盖当前数据）。导出功能在「周手册 → 导出」。</p>
+            <p className="muted">
+              备份是完整 JSON（学生/考试/成绩/记录），可存档或搬到新手机；恢复会覆盖当前数据。
+            </p>
             <input
               ref={restoreRef}
               type="file"
@@ -163,9 +167,21 @@ export function SettingsScreen({
                 e.target.value = '';
               }}
             />
-            <button className="btn" onClick={() => restoreRef.current?.click()}>
-              恢复备份…
-            </button>
+            <div className="btn-row">
+              <button
+                className="btn"
+                onClick={() => {
+                  const name = `子衿备份-${todayStr()}.json`;
+                  downloadFile(JSON.stringify(data, null, 2), name, 'application/json');
+                  alert(`已生成 ${name}`);
+                }}
+              >
+                导出备份 JSON
+              </button>
+              <button className="btn" onClick={() => restoreRef.current?.click()}>
+                恢复备份…
+              </button>
+            </div>
           </section>
 
           <section className="card">
