@@ -103,3 +103,17 @@ node scripts/accept.mjs dump.json
 - 闸门结果：`npm run build` → 成功（tsc + vite，333ms）；`vite preview` → HTTP 200，页面标题「子衿」正常返回。
 - 与原计划的偏差：环境里 esbuild 的 postinstall 被 allow-scripts 拦截，需 `npm approve-scripts esbuild`
   后手动执行 `node node_modules/esbuild/install.js`——换机器复现时注意这一步。无其它偏差。
+
+## 阶段 1 完成
+- 实际做了什么：`src/domain/` 五个纯函数模块——
+  `types.ts`（AppData 公开契约：students/exams/scores/records，pool 必填）、
+  `pool.ts`（poolKey/poolLabel/rankText「二层内第 5 名」/parseTierLabel「3区1A→1层」/samePool）、
+  `rank.ts`（computeRanks 同分同名次 1,1,3；findPoolInversions 池内单调性校验）、
+  `score.ts`（totalFor 总分现算；rankDelta 浮动，池不同→不可比绝不给差值）、
+  `weekly.ts`（weekOf 周一对齐、weeklySummary 覆盖/未覆盖名单、recordsOf 时间线）、
+  `format.ts`（分数/浮动文本）。
+- 闸门结果：`npx vitest run` → 48/48 全绿；`grep -r "react\|window\|document" src/domain` → 无命中。
+- 与原计划的偏差：①抓到一个自己的 bug（fmtDelta 负数输出 `--4`），单测先红后修——这正是闸门的价值；
+  ②池的 scope 在 design-data 的 grade/tier 之外增加了 `class`：当表里没有名次列（如 sample-flat），
+  只能按导入范围现算名次，此时标「班内」比谎称「全年级」诚实；③读样例发现分层是**按科目**的
+  （同一学生数学 1A、英语 1B），tier 归属跟 (学生, 科目) 走，不跟学生走——已按此建模。
