@@ -2,7 +2,7 @@
  * 周汇总：本周覆盖（每个学生本周有没有被记录过）+ 未覆盖名单。
  * 周一为一周之始。
  */
-import type { RecordItem, Student } from './types';
+import type { RecordItem, Student } from './types.ts';
 
 /** 'YYYY-MM-DD' → 当日所在周的 [周一, 周日]，均 'YYYY-MM-DD' */
 export function weekOf(date: string): { start: string; end: string } {

@@ -10,7 +10,7 @@ function sc(
   subject: string,
   raw: number | null,
   rank: number | null,
-  pool: { subject: string; tier: string | null; scope: string } = poolGrade,
+  pool: import('./types').RankPool = poolGrade,
 ): Score {
   return { studentId: 's1', examId, subject, raw, rank, pool: { ...pool } };
 }

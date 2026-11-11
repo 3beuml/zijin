@@ -117,3 +117,30 @@ node scripts/accept.mjs dump.json
   ②池的 scope 在 design-data 的 grade/tier 之外增加了 `class`：当表里没有名次列（如 sample-flat），
   只能按导入范围现算名次，此时标「班内」比谎称「全年级」诚实；③读样例发现分层是**按科目**的
   （同一学生数学 1A、英语 1B），tier 归属跟 (学生, 科目) 走，不跟学生走——已按此建模。
+
+## 阶段 2 完成
+- 实际做了什么：
+  - `src/domain/import/`：`detect.ts`（结构探测器，T1 规格全实现：表头行数/标题行识别、次别后缀、
+    重复列名按位置归左、派生列、坏数据 warning）、`map.ts`（模板匹配优先 + 启发式兜底 + 姓名列猜测）、
+    `commit.ts`（落库：学生按姓名+班级合并、考试按 label 复用、总分现算、缺考→空、重复行去重、
+    无名次列→按导入范围现算名次并标班内池、落库前池内单调性自检）。
+  - `src/storage/db.ts`：IndexedDB 封装（单键整库，v0.1 够用且备份简单）。
+  - CLI：`scripts/detect/cli.mjs`（xlsx→草图 JSON）、`scripts/import-sample.mjs`（端到端导入→dump.json），
+    基建在 `scripts/lib/read-table.mjs`（exceljs→Cell[][]，公式取 result、富文本拼接）。
+  - Node 24 原生跑 .ts（type stripping），所以 CLI 直接 import src/domain 的 TS 模块——
+    相对 import 必须带 `.ts` 扩展名（对 Vite 无影响）。
+- 闸门结果：`npx vitest run` → 72/72 全绿；4 份样例全部可导入
+  （standard 33生/2考/330分数行；flat 33生；messy 33生跳标题与合计；broken 11生去重+缺考处理）；
+  `node scripts/accept.mjs .run/dump-standard.json` → **验收通过（7/7）**。
+- 与原计划的偏差：
+  ①**上次考试的分数列（分数1）不导入**，只导入名次列（rankPrev）——总分1 数值也丢弃。
+  原因：accept 的总分校验要求「总分=四科之和」，而表里没有上次考试的分科分数，
+  导入总分1 会让上次考试的总分校验必然失败；且功能上浮动只靠名次。已在 commit 的 warning 里说明。
+  ②**总分校验报警修正**：最初拿「总分1」列对照现算总分，误报 33 条不一致；改为取 attempt≠1 的总分列。
+  ③抓到两个真 bug：重复行会在分数循环里产生重复分数（用 rowOfStudent 只认首现行修复）；
+  表头探测原要求 ≥2 个数字格才停，两列表的小表会把整表当表头（改为 ≥1，且文本数字也算）。
+  ④detect 的 index 用 **1 起数**，与 T1 示例、模板 col 保持一致。
+  ⑤T1 建议的 `scripts/detect/` 位置改为 `src/domain/import/`（架构铁律：管线在 domain，才能被单测和
+  夜间自动化复用），`scripts/detect/cli.mjs` 保留为薄包装，两种写法都能跑。
+  ⑥模板库机制已实现（map 优先匹配），但 v0.1 没有做模板的持久化存储/导入分享界面——样本四份
+  启发式全中，模板优先级降低；后续加。

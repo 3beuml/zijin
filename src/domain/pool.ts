@@ -2,7 +2,7 @@
  * 排名池：键、标签、同池判断。
  * 铁律：名次只在同池内可比；展示必须带池标签。
  */
-import type { RankPool, Tier } from './types';
+import type { RankPool, Tier } from './types.ts';
 
 /** 池的唯一键（存储与比较用） */
 export function poolKey(p: RankPool): string {

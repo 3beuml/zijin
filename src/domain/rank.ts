@@ -2,8 +2,8 @@
  * 名次计算：仅在「导入范围内」现算，用 scope='class' 标注（表里没给名次时的兜底）。
  * 同分同名次（中国学校惯例：1,1,3）。
  */
-import type { RankPool, Score } from './types';
-import { poolKey } from './pool';
+import type { RankPool, Score } from './types.ts';
+import { poolKey } from './pool.ts';
 
 export interface RankInput {
   studentId: string;

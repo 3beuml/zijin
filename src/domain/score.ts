@@ -1,9 +1,9 @@
 /**
  * 成绩计算：总分现算（派生值不落库源数据）、跨考试名次浮动（同池才可比）。
  */
-import { CORE_SUBJECTS, TOTAL_SUBJECT } from './types';
-import type { Score } from './types';
-import { samePool } from './pool';
+import { CORE_SUBJECTS, TOTAL_SUBJECT } from './types.ts';
+import type { Score } from './types.ts';
+import { samePool } from './pool.ts';
 
 /** 一个学生在某次考试的总分 = 其已有科目分数之和；一科都没有 → null */
 export function totalFor(scores: Score[], studentId: string, examId: string): number | null {
