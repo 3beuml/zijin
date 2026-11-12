@@ -12,6 +12,7 @@ import { RecordsScreen } from './screens/RecordsScreen';
 import { WeeklyScreen } from './screens/WeeklyScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { TodosScreen } from './screens/TodosScreen';
+import { ExamsScreen } from './screens/ExamsScreen';
 import { SearchOverlay } from './components/SearchOverlay.tsx';
 
 type Tab = 'home' | 'students' | 'records' | 'todos' | 'mine';
@@ -22,6 +23,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('home');
   const [detailId, setDetailId] = useState<string | null>(null);
   const [weeklyOpen, setWeeklyOpen] = useState(false);
+  const [examsOpen, setExamsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
@@ -113,6 +115,7 @@ export default function App() {
             onImported={persist}
             onWipe={wipeAll}
             onGoWeekly={() => setWeeklyOpen(true)}
+            onGoExams={() => setExamsOpen(true)}
           />
         )}
       </main>
@@ -121,11 +124,15 @@ export default function App() {
         <WeeklyScreen data={data} onOpenStudent={setDetailId} onBack={() => setWeeklyOpen(false)} />
       )}
 
+      {examsOpen && (
+        <ExamsScreen data={data} onOpenStudent={setDetailId} onBack={() => setExamsOpen(false)} />
+      )}
+
       {searchOpen && (
         <SearchOverlay data={data} onClose={() => setSearchOpen(false)} onOpenStudent={setDetailId} />
       )}
 
-      {detailId == null && !weeklyOpen && (
+      {detailId == null && !weeklyOpen && !examsOpen && (
         <nav className="tabbar">
           <button className={`tabbar-item${tab === 'home' ? ' active' : ''}`} onClick={() => setTab('home')}>
             今日
