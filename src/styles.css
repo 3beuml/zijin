@@ -738,6 +738,45 @@ li:last-child > .row {
   width: 100%;
 }
 
+/* ---- 今日页（v0.2）---- */
+.overdue-badge {
+  color: var(--danger);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  margin-left: var(--space-2);
+}
+
+.ok-text {
+  color: var(--success);
+}
+
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+}
+
+.quick-btn {
+  min-height: var(--touch-min);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--indigo-100);
+  color: var(--indigo-700);
+  font: inherit;
+  font-size: var(--text-md);
+  cursor: pointer;
+}
+
+.quick-btn:active {
+  background: var(--indigo-500);
+  color: #fff;
+}
+
+.student-pick-list {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
 .btn-row {
   display: flex;
   gap: var(--space-2);

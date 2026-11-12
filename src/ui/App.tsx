@@ -5,18 +5,19 @@
 import { useEffect, useState } from 'react';
 import type { AppData, RecordItem, Todo } from '../domain/types.ts';
 import { emptyData, loadData, saveData, clearData } from '../storage/db.ts';
+import { HomeScreen } from './screens/HomeScreen';
 import { StudentsScreen } from './screens/StudentsScreen';
 import { StudentDetail } from './screens/StudentDetail';
 import { WeeklyScreen } from './screens/WeeklyScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { TodosScreen } from './screens/TodosScreen';
 
-type Tab = 'students' | 'todos' | 'weekly' | 'mine';
+type Tab = 'home' | 'students' | 'todos' | 'weekly' | 'mine';
 
 export default function App() {
   const [data, setData] = useState<AppData | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const [tab, setTab] = useState<Tab>('students');
+  const [tab, setTab] = useState<Tab>('home');
   const [detailId, setDetailId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -74,6 +75,15 @@ export default function App() {
   return (
     <div className="app">
       <main className="app-main">
+        {tab === 'home' && (
+          <HomeScreen
+            data={data}
+            onUpdate={persist}
+            onOpenStudent={setDetailId}
+            onGoStudents={() => setTab('students')}
+            onGoTodos={() => setTab('todos')}
+          />
+        )}
         {tab === 'students' &&
           (detailId ? (
             <StudentDetail
@@ -93,6 +103,9 @@ export default function App() {
 
       {detailId == null && (
         <nav className="tabbar">
+          <button className={`tabbar-item${tab === 'home' ? ' active' : ''}`} onClick={() => setTab('home')}>
+            今日
+          </button>
           <button className={`tabbar-item${tab === 'students' ? ' active' : ''}`} onClick={() => setTab('students')}>
             学生
           </button>
