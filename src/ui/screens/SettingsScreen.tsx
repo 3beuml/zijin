@@ -1,45 +1,13 @@
 /**
- * 我的：导入成绩表（detect → map → 【人工确认】→ commit）、恢复 JSON、清空数据。
- * 备份导出与打印在阶段 4。
+ * 我的：分包设置、周手册/成绩分析/全部记录入口、备份恢复、每日快照、清空。
+ * 导入走 App 级触发（dock 中键与这里共用同一条流程）。
  */
 import { useEffect, useRef, useState } from 'react';
 import type { AppData } from '../../domain/types.ts';
-import { tableFromBuffer } from '../../lib/xlsx.ts';
-import { detect } from '../../domain/import/detect.ts';
-import { map } from '../../domain/import/map.ts';
-import { commit } from '../../domain/import/commit.ts';
 import { distinctAdvisors } from '../../domain/students.ts';
-import type { ImportMapping, SketchRole } from '../../domain/import/types.ts';
 import { downloadFile } from '../print.ts';
 import { todayStr } from '../util.ts';
 import { normalizeData, listSnapshots, type Snapshot } from '../../storage/db.ts';
-
-const ROLES: SketchRole[] = [
-  'student.name', 'student.class', 'exam.total', 'exam.rank',
-  'subject.score', 'subject.rank', 'subject.rankPrev', 'tier',
-  'advisor', 'derived', 'unknown',
-];
-
-const ROLE_LABEL: Record<SketchRole, string> = {
-  'student.name': '姓名',
-  'student.class': '班级',
-  'exam.total': '总分',
-  'exam.rank': '名次(全表)',
-  'subject.score': '分数',
-  'subject.rank': '名次',
-  'subject.rankPrev': '上次名次',
-  tier: '分层',
-  advisor: '导师',
-  derived: '派生(不导入)',
-  unknown: '不导入',
-};
-
-interface PendingImport {
-  fileName: string;
-  table: (string | number | null)[][];
-  sketchHeaderRows: number;
-  mapping: ImportMapping;
-}
 
 export function SettingsScreen({
   data,
@@ -47,16 +15,18 @@ export function SettingsScreen({
   onWipe,
   onGoWeekly,
   onGoExams,
+  onGoRecords,
+  onGoImport,
 }: {
   data: AppData;
   onImported: (next: AppData) => Promise<void>;
   onWipe: () => Promise<void>;
   onGoWeekly: () => void;
   onGoExams: () => void;
+  onGoRecords: () => void;
+  onGoImport: () => void;
 }) {
-  const [pending, setPending] = useState<PendingImport | null>(null);
-  const [report, setReport] = useState<string[] | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [report] = useState<string[] | null>(null);
   const restoreRef = useRef<HTMLInputElement>(null);
   const [wipeArmed, setWipeArmed] = useState(false);
   const [snaps, setSnaps] = useState<Snapshot[]>([]);
@@ -72,37 +42,6 @@ export function SettingsScreen({
     if (!confirm(`恢复到 ${snap.date} 的快照？会覆盖当前数据。`)) return;
     await onImported(normalizeData(snap.data));
     alert(`已恢复 ${snap.date} 的快照`);
-  };
-
-  const openFile = async (file: File) => {
-    setReport(null);
-    try {
-      const buf = await file.arrayBuffer();
-      const { table, sheetName } = await tableFromBuffer(buf);
-      const sketch = detect(table);
-      const mapping = map(table, sketch, [], {});
-      setPending({ fileName: `${file.name}（${sheetName}）`, table, sketchHeaderRows: sketch.headerRows, mapping });
-    } catch (e) {
-      alert(`读表失败：${e instanceof Error ? e.message : String(e)}`);
-    }
-  };
-
-  const doImport = async () => {
-    if (!pending) return;
-    const { table, mapping } = pending;
-    const examLabels: Record<number, string> = {};
-    for (const c of mapping.columns) {
-      if (c.attempt) examLabels[c.attempt] = mapping.examLabels[c.attempt] ?? `第${c.attempt}次`;
-    }
-    const result = commit(data, table, mapping, { examLabels });
-    await onImported(result.data);
-    setPending(null);
-    setReport([
-      `新增学生 ${result.report.studentsCreated} 人（匹配已有 ${result.report.studentsMatched} 人）`,
-      `新增考试 ${result.report.examsCreated} 场，写入分数 ${result.report.scoresWritten} 行`,
-      ...result.report.droppedRows.map((d) => `第 ${d.row} 行未导入：${d.reason}`),
-      ...result.report.warnings,
-    ]);
   };
 
   const restore = async (file: File) => {
@@ -149,244 +88,118 @@ export function SettingsScreen({
         </section>
       )}
 
-      {pending ? (
-        <ImportConfirm pending={pending} onCancel={() => setPending(null)} onConfirm={doImport} />
-      ) : (
-        <>
-          <section className="card" onClick={onGoWeekly} role="button" aria-label="打开周手册">
-            <h2 className="card-title">周工作手册</h2>
-            <p className="muted">登记表 · 下周重点 · 导出 Excel / A4 / 打印（周五交材料用）</p>
-          </section>
+      <section className="card" onClick={onGoWeekly} role="button" aria-label="打开周手册">
+        <h2 className="card-title">周工作手册</h2>
+        <p className="muted">登记表 · 下周重点 · 导出 Excel / A4 / 打印（周五交材料用）</p>
+      </section>
 
-          <section className="card" onClick={onGoExams} role="button" aria-label="打开成绩分析">
-            <h2 className="card-title">成绩分析</h2>
-            <p className="muted">各科班均 / 总分前三 / 每生与班均差（考后看）</p>
-          </section>
+      <section className="card" onClick={onGoExams} role="button" aria-label="打开成绩分析">
+        <h2 className="card-title">成绩分析</h2>
+        <p className="muted">各科班均 / 总分前三 / 每生与班均差（考后看）</p>
+      </section>
 
-          {advisors.length > 0 && (
-            <section className="card">
-              <h2 className="card-title">分包</h2>
-              <p className="muted">
-                设置「我是哪位导师」后，学生列表默认只看你的学生，周手册按你的分包生成。
-              </p>
-              <select
-                className="advisor-select"
-                value={data.settings.advisor}
-                aria-label="我是哪位导师"
-                onChange={(e) => void onImported({ ...data, settings: { advisor: e.target.value } })}
-              >
-                <option value="">未设置</option>
-                {advisors.map((a) => (
-                  <option key={a} value={a}>
-                    {a}
-                  </option>
-                ))}
-              </select>
-            </section>
-          )}
+      <section className="card" onClick={onGoRecords} role="button" aria-label="打开全部记录">
+        <h2 className="card-title">全部记录</h2>
+        <p className="muted">
+          {data.records.length} 条沟通/谈心/家访记录的统一时间线，可查可改（换名字、约错了时间都在这改）
+        </p>
+      </section>
 
-          <section className="card">
-            <h2 className="card-title">导入成绩表</h2>
-            <p className="muted">
-              支持 .xlsx。先自动识别列，再由你确认；识别不准的列会标黄。
-            </p>
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".xlsx,.xlsm"
-              style={{ display: 'none' }}
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void openFile(f);
-                e.target.value = '';
-              }}
-            />
-            <button className="btn primary" onClick={() => fileRef.current?.click()}>
-              选择成绩表文件
-            </button>
-          </section>
+      <section className="card">
+        <h2 className="card-title">导入成绩表</h2>
+        <p className="muted">
+          支持 .xlsx。先自动识别列，再由你确认；识别不准的列会标黄。
+          （dock 中间的 ＋ 键里也能导入）
+        </p>
+        <button className="btn primary" onClick={onGoImport}>
+          选择成绩表文件
+        </button>
+      </section>
 
-          <section className="card">
-            <h2 className="card-title">备份</h2>
-            <p className="muted">
-              备份是完整 JSON（学生/考试/成绩/记录），可存档或搬到新手机；恢复会覆盖当前数据。
-            </p>
-            <input
-              ref={restoreRef}
-              type="file"
-              accept=".json,application/json"
-              style={{ display: 'none' }}
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void restore(f);
-                e.target.value = '';
-              }}
-            />
-            <div className="btn-row">
-              <button
-                className="btn"
-                onClick={() => {
-                  const name = `子衿备份-${todayStr()}.json`;
-                  downloadFile(JSON.stringify(data, null, 2), name, 'application/json');
-                  alert(`已生成 ${name}`);
-                }}
-              >
-                导出备份 JSON
-              </button>
-              <button className="btn" onClick={() => restoreRef.current?.click()}>
-                恢复备份…
-              </button>
-            </div>
-          </section>
-
-          {snaps.length > 0 && (
-            <section className="card">
-              <h2 className="card-title">每日快照（自动保留 7 天）</h2>
-              <ul className="plain-list">
-                {snaps.map((s) => (
-                  <li key={s.date} className="snap-row">
-                    <span>
-                      {s.date} · {s.data.students.length} 学生 / {s.data.records.length} 记录
-                    </span>
-                    <button className="link-btn" onClick={() => void restoreSnapshot(s)}>
-                      恢复
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              <p className="muted">每天首次打开 App 时自动拍一次；误删可回退。</p>
-            </section>
-          )}
-
-          <section className="card">
-            <h2 className="card-title">数据</h2>
-            <p className="muted">
-              当前 {data.students.length} 名学生 · {data.exams.length} 场考试 · {data.records.length} 条记录。
-              数据只存在本机。
-            </p>
-            <button className={`btn ${wipeArmed ? 'danger-solid' : 'danger'}`} onClick={wipe}>
-              {wipeArmed ? '再点一次确认清空' : '清空全部数据…'}
-            </button>
-          </section>
-        </>
-      )}
-    </div>
-  );
-}
-
-function ImportConfirm({
-  pending,
-  onCancel,
-  onConfirm,
-}: {
-  pending: PendingImport;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  const [mapping, setMapping] = useState<ImportMapping>(pending.mapping);
-  const lowConfidence = mapping.columns.filter((c) => c.confidence < 0.7 && c.role !== 'unknown');
-
-  const setCol = (index: number, patch: Partial<import('../../domain/import/types.ts').MappingColumn>) => {
-    setMapping((m) => ({
-      ...m,
-      columns: m.columns.map((c) => (c.index === index ? { ...c, ...patch } : c)),
-    }));
-  };
-
-  return (
-    <div className="page">
-      <button className="back" onClick={onCancel}>
-        ‹ 取消
-      </button>
-      <h1 className="page-title">确认导入</h1>
-      <div className="summary-line">{pending.fileName}</div>
-
-      {pending.mapping.warnings.length > 0 && (
-        <section className="card warn-card">
-          <ul className="plain-list">
-            {pending.mapping.warnings.map((w, i) => (
-              <li key={i}>⚠ {w}</li>
+      {advisors.length > 0 && (
+        <section className="card">
+          <h2 className="card-title">分包</h2>
+          <p className="muted">
+            设置「我是哪位导师」后，学生列表默认只看你的学生，周手册按你的分包生成。
+          </p>
+          <select
+            className="advisor-select"
+            value={data.settings.advisor}
+            aria-label="我是哪位导师"
+            onChange={(e) => void onImported({ ...data, settings: { advisor: e.target.value } })}
+          >
+            <option value="">未设置</option>
+            {advisors.map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
             ))}
-          </ul>
+          </select>
         </section>
       )}
 
       <section className="card">
-        <h2 className="card-title">考试命名</h2>
-        <div className="exam-label-row">
-          <label>
-            第1次
-            <input
-              value={mapping.examLabels[1] ?? ''}
-              onChange={(e) => setMapping((m) => ({ ...m, examLabels: { ...m.examLabels, 1: e.target.value } }))}
-            />
-          </label>
-          <label>
-            第2次
-            <input
-              value={mapping.examLabels[2] ?? ''}
-              onChange={(e) => setMapping((m) => ({ ...m, examLabels: { ...m.examLabels, 2: e.target.value } }))}
-            />
-          </label>
+        <h2 className="card-title">备份</h2>
+        <p className="muted">
+          备份是完整 JSON（学生/考试/成绩/记录/待办），可存档或搬到新手机；恢复会覆盖当前数据。
+        </p>
+        <input
+          ref={restoreRef}
+          type="file"
+          accept=".json,application/json"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void restore(f);
+            e.target.value = '';
+          }}
+        />
+        <div className="btn-row">
+          <button
+            className="btn"
+            onClick={() => {
+              const name = `子衿备份-${todayStr()}.json`;
+              downloadFile(JSON.stringify(data, null, 2), name, 'application/json');
+              alert(`已生成 ${name}`);
+            }}
+          >
+            导出备份 JSON
+          </button>
+          <button className="btn" onClick={() => restoreRef.current?.click()}>
+            恢复备份…
+          </button>
         </div>
       </section>
 
-      <section className="card">
-        <h2 className="card-title">列识别（{mapping.columns.length} 列）</h2>
-        <table className="map-table">
-          <tbody>
-            {mapping.columns.map((c) => (
-              <tr key={c.index} className={c.confidence < 0.7 ? 'low-conf' : ''}>
-                <td className="map-idx num">{c.index}</td>
-                <td className="map-header">{c.header}</td>
-                <td>
-                  <select
-                    value={c.role}
-                    onChange={(e) => setCol(c.index, { role: e.target.value as SketchRole })}
-                    aria-label={`列 ${c.index} 角色`}
-                  >
-                    {ROLES.map((r) => (
-                      <option key={r} value={r}>
-                        {ROLE_LABEL[r]}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td>
-                  {(c.role === 'subject.score' || c.role === 'subject.rank' || c.role === 'subject.rankPrev' || c.role === 'tier') && (
-                    <input
-                      className="subject-input"
-                      value={c.subject ?? ''}
-                      placeholder="科目"
-                      onChange={(e) => setCol(c.index, { subject: e.target.value })}
-                    />
-                  )}
-                </td>
-                <td>
-                  {c.role !== 'student.name' && c.role !== 'student.class' && c.role !== 'advisor' && c.role !== 'unknown' && c.role !== 'derived' && (
-                    <select
-                      value={c.attempt ?? ''}
-                      onChange={(e) => setCol(c.index, { attempt: e.target.value ? Number(e.target.value) : undefined })}
-                      aria-label={`列 ${c.index} 次别`}
-                    >
-                      <option value="">—</option>
-                      <option value={1}>第1次</option>
-                      <option value={2}>第2次</option>
-                    </select>
-                  )}
-                </td>
-              </tr>
+      {snaps.length > 0 && (
+        <section className="card">
+          <h2 className="card-title">每日快照（自动保留 7 天）</h2>
+          <ul className="plain-list">
+            {snaps.map((s) => (
+              <li key={s.date} className="snap-row">
+                <span>
+                  {s.date} · {s.data.students.length} 学生 / {s.data.records.length} 记录
+                </span>
+                <button className="link-btn" onClick={() => void restoreSnapshot(s)}>
+                  恢复
+                </button>
+              </li>
             ))}
-          </tbody>
-        </table>
-        {lowConfidence.length > 0 && (
-          <p className="muted">标黄行列的识别把握不大，请逐列核对。</p>
-        )}
-      </section>
+          </ul>
+          <p className="muted">每天首次打开 App 时自动拍一次；误删可回退。</p>
+        </section>
+      )}
 
-      <button className="btn primary big" onClick={onConfirm}>
-        确认导入
-      </button>
+      <section className="card">
+        <h2 className="card-title">数据</h2>
+        <p className="muted">
+          当前 {data.students.length} 名学生 · {data.exams.length} 场考试 · {data.records.length} 条记录。
+          数据只存在本机。
+        </p>
+        <button className={`btn ${wipeArmed ? 'danger-solid' : 'danger'}`} onClick={wipe}>
+          {wipeArmed ? '再点一次确认清空' : '清空全部数据…'}
+        </button>
+      </section>
     </div>
   );
 }

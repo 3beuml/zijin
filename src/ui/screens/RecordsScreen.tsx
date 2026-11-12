@@ -12,10 +12,12 @@ export function RecordsScreen({
   data,
   onUpdate,
   onOpenStudent,
+  onBack,
 }: {
   data: AppData;
   onUpdate: (next: AppData) => Promise<void>;
   onOpenStudent: (id: string) => void;
+  onBack?: () => void;
 }) {
   const [type, setType] = useState<string | null>(null);
   const [kw, setKw] = useState('');
@@ -39,6 +41,11 @@ export function RecordsScreen({
 
   return (
     <div className="page">
+      {onBack && (
+        <button className="back" onClick={onBack}>
+          ‹ 返回
+        </button>
+      )}
       <h1 className="page-title">记录</h1>
       <div className="summary-line">{data.records.length} 条 · 点行里的姓名进学生档案</div>
 

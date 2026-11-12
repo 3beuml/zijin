@@ -117,6 +117,7 @@ body {
   right: 0;
   bottom: 0;
   display: flex;
+  align-items: stretch;
   background: var(--surface);
   border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom);
@@ -130,6 +131,59 @@ body {
   font-size: var(--text-sm);
   color: var(--ink-600);
   font-family: inherit;
+}
+
+/* 中键 ＋：靛青圆钮，略高于栏面（design-ui：不投影，用形状与颜色区分） */
+.tabbar-plus {
+  flex: 1;
+  height: var(--touch-min);
+  border: 0;
+  background: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.tabbar-plus .plus-disc {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--indigo-700);
+  color: #fff;
+  font-size: 26px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 2px;
+}
+
+.tabbar-plus:active .plus-disc {
+  background: var(--indigo-500);
+}
+
+/* ＋ 动作盘 */
+.plus-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.plus-list {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.plus-list .row {
+  border-bottom: 1px solid var(--line);
+}
+
+.plus-list .row:last-child {
+  border-bottom: 0;
 }
 
 .tabbar-item.active {
