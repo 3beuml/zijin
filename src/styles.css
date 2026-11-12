@@ -681,6 +681,63 @@ li:last-child > .row {
   min-width: 0;
 }
 
+/* ---- 分包视角（v0.2）---- */
+.scope-switch {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.scope-btn {
+  flex: 1;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink-600);
+  font: inherit;
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.scope-btn.active {
+  background: var(--indigo-100);
+  border-color: var(--indigo-500);
+  color: var(--indigo-700);
+  font-weight: 600;
+}
+
+.scope-btn.active.warn {
+  background: #fdf3e4;
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.scope-hint {
+  background: var(--indigo-100);
+  border-radius: var(--radius-control);
+  color: var(--indigo-700);
+  font-size: var(--text-xs);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.mine-tag {
+  margin-left: var(--space-2);
+}
+
+.advisor-select {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  padding: 0 var(--space-2);
+  font: inherit;
+  font-size: var(--text-md);
+  background: var(--surface);
+  color: var(--ink-900);
+  width: 100%;
+}
+
 .btn-row {
   display: flex;
   gap: var(--space-2);

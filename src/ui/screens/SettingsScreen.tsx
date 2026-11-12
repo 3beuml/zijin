@@ -8,6 +8,7 @@ import { tableFromBuffer } from '../../lib/xlsx.ts';
 import { detect } from '../../domain/import/detect.ts';
 import { map } from '../../domain/import/map.ts';
 import { commit } from '../../domain/import/commit.ts';
+import { distinctAdvisors } from '../../domain/students.ts';
 import type { ImportMapping, SketchRole } from '../../domain/import/types.ts';
 import { downloadFile } from '../print.ts';
 import { todayStr } from '../util.ts';
@@ -54,6 +55,7 @@ export function SettingsScreen({
   const fileRef = useRef<HTMLInputElement>(null);
   const restoreRef = useRef<HTMLInputElement>(null);
   const [wipeArmed, setWipeArmed] = useState(false);
+  const advisors = distinctAdvisors(data.students);
 
   const openFile = async (file: File) => {
     setReport(null);
@@ -134,6 +136,28 @@ export function SettingsScreen({
         <ImportConfirm pending={pending} onCancel={() => setPending(null)} onConfirm={doImport} />
       ) : (
         <>
+          {advisors.length > 0 && (
+            <section className="card">
+              <h2 className="card-title">分包</h2>
+              <p className="muted">
+                设置「我是哪位导师」后，学生列表默认只看你的学生，周手册按你的分包生成。
+              </p>
+              <select
+                className="advisor-select"
+                value={data.settings.advisor}
+                aria-label="我是哪位导师"
+                onChange={(e) => void onImported({ ...data, settings: { advisor: e.target.value } })}
+              >
+                <option value="">未设置</option>
+                {advisors.map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+              </select>
+            </section>
+          )}
+
           <section className="card">
             <h2 className="card-title">导入成绩表</h2>
             <p className="muted">
