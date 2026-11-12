@@ -46,7 +46,8 @@ function matchTemplate(
   return null;
 }
 
-/** 兜底：找一列「多数为文本、基本唯一」的数据列当姓名列 */
+/** 兜底：找一列「多数为文本、基本唯一」的数据列当姓名列。
+ *  学号/考号这类全数字列唯一率同样高，会被误选——数字占比过高的列直接排除。 */
 function guessNameColumn(table: Cell[][], sketch: StructureSketch): ColumnSketch | null {
   const start = sketch.dataStartRow - 1;
   const end = sketch.dataEndRow - 1;
@@ -63,6 +64,8 @@ function guessNameColumn(table: Cell[][], sketch: StructureSketch): ColumnSketch
       vals.push(t);
     }
     if (nonNull < 3) continue;
+    const numericRatio = vals.filter((t) => /^-?\d+(\.\d+)?$/.test(t)).length / vals.length;
+    if (numericRatio > 0.6) continue; // 学号/考号，不是姓名
     const unique = new Set(vals).size;
     const textRatio = nonNull / Math.max(1, end - start + 1);
     const uniqueness = unique / nonNull;

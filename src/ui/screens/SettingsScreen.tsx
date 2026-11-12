@@ -108,8 +108,8 @@ export function SettingsScreen({
       <section className="card">
         <h2 className="card-title">导入成绩表</h2>
         <p className="muted">
-          支持 .xlsx。先自动识别列，再由你确认；识别不准的列会标黄。
-          （dock 中间的 ＋ 键里也能导入）
+          支持 Excel（.xlsx）和 CSV 文件。先自动识别列，再由你确认；识别不准的列会标黄。
+          （底部中间的 ＋ 键里也能导入）
         </p>
         <button className="btn primary" onClick={onGoImport}>
           选择成绩表文件

@@ -140,12 +140,21 @@ function ExamBlock({
     const ib = b === TOTAL_SUBJECT ? 9 : 0;
     return ia - ib;
   });
+  // 这次考试是否「只有名次」（导入的表里没有分数列，只留了名次用来算浮动）
+  const rankOnly =
+    subjects.length > 0 &&
+    data.scores
+      .filter((s) => s.examId === exam.id && s.studentId === studentId && s.subject !== TOTAL_SUBJECT)
+      .every((s) => s.raw == null);
   return (
     <div className="exam-block">
       <div className="exam-title">
         {exam.label}
         {exam.date ? ` · ${exam.date}` : ''}
       </div>
+      {rankOnly && (
+        <p className="muted rank-only-note">这次考试只记了名次（当时导入的表里没有分数列），分数显示「—」是正常的。</p>
+      )}
       <table className="score-table">
         <tbody>
           {subjects.map((subject) => {
@@ -209,6 +218,20 @@ function RecordSection({
   return (
     <section className="card">
       <h2 className="card-title">记录（{records.length}）</h2>
+      {records.length > 0 && (
+        <div className="recent-records">
+          <div className="recent-records-title">最近 {Math.min(2, records.length)} 条（写的时候参考，避免记重）</div>
+          <ul>
+            {records.slice(0, 2).map((r) => (
+              <li key={r.id}>
+                <span className="tl-date">{r.date}</span>
+                <span className="tag">{r.type}</span>
+                <span className="recent-content">{r.content}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div className="record-form">
         <div className="record-form-row">
           <select value={type} onChange={(e) => setType(e.target.value)} aria-label="记录类型">
@@ -219,10 +242,11 @@ function RecordSection({
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="日期" />
         </div>
         <textarea
+          className="autosize"
           placeholder="记一笔……（发生了什么、约定了什么）"
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          rows={2}
+          rows={4}
         />
         <input
           className="followup-input"

@@ -3,6 +3,7 @@
  * dock：今日 | 学生 | ＋(动作盘) | 待办 | 我的 —— 参考 teacher「4 主入口 + 中间快速动作」。
  * ＋ 弹出：记一笔 / 新建待办 / 导入成绩表（导入从任何页面两下可达）。
  * 全屏页（周手册 / 成绩分析 / 全部记录）走 screen-overlay，不占 tabbar 席位。
+ * v0.5：导入支持 .csv 与多工作表选择；导入结果改为应用内结果页（不再用 alert）。
  */
 import { useEffect, useRef, useState } from 'react';
 import type { AppData, RecordItem, Todo } from '../domain/types.ts';
@@ -11,7 +12,7 @@ import { detect } from '../domain/import/detect.ts';
 import { map } from '../domain/import/map.ts';
 import { commit } from '../domain/import/commit.ts';
 import type { ImportMapping } from '../domain/import/types.ts';
-import { tableFromBuffer } from '../lib/xlsx.ts';
+import { tablesFromBuffer, type SheetTable } from '../lib/xlsx.ts';
 import { HomeScreen } from './screens/HomeScreen';
 import { StudentsScreen } from './screens/StudentsScreen';
 import { StudentDetail } from './screens/StudentDetail';
@@ -24,9 +25,19 @@ import { SearchOverlay } from './components/SearchOverlay.tsx';
 import { QuickRecordSheet } from './components/QuickRecordSheet.tsx';
 import { TodoForm } from './components/TodoForm.tsx';
 import { ImportConfirmSheet, type PendingImport } from './components/ImportConfirmSheet.tsx';
+import { ImportResultSheet } from './components/ImportResultSheet.tsx';
 import { myStudents } from '../domain/students.ts';
+import { IconToday, IconStudents, IconPlus, IconTodos, IconMine, IconClose, IconImport, IconTalk, IconHeart, IconHomeVisit, IconMore } from './icons.tsx';
 
 type Tab = 'home' | 'students' | 'todos' | 'mine';
+
+/** ＋ 动作盘的四个快捷记录类型 */
+const QUICK_TYPES: [string, (props: { size?: number }) => JSX.Element][] = [
+  ['沟通', IconTalk],
+  ['谈心', IconHeart],
+  ['家访', IconHomeVisit],
+  ['其他', IconMore],
+];
 
 export default function App() {
   const [data, setData] = useState<AppData | null>(null);
@@ -42,6 +53,8 @@ export default function App() {
   const [quickOpen, setQuickOpen] = useState(false);
   const [quickType, setQuickType] = useState<string | undefined>(undefined);
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
+  const [importResult, setImportResult] = useState<{ fileName: string; report: Awaited<ReturnType<typeof commit>>['report'] } | null>(null);
+  const [sheetPick, setSheetPick] = useState<{ fileName: string; sheets: SheetTable[] } | null>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -107,38 +120,43 @@ export default function App() {
   const onImportFile = async (file: File) => {
     try {
       const buf = await file.arrayBuffer();
-      const { table, sheetName } = await tableFromBuffer(buf);
-      const sketch = detect(table);
-      const mapping = map(table, sketch, [], {});
-      setPendingImport({
-        fileName: `${file.name}（${sheetName}）`,
-        table,
-        sketchHeaderRows: sketch.headerRows,
-        mapping,
-      });
+      const { sheets } = await tablesFromBuffer(buf);
+      if (sheets.length === 0) {
+        alert('这份文件里没有找到有数据的表格。');
+        return;
+      }
+      if (sheets.length === 1) {
+        startImportFlow(file.name, sheets[0]);
+        return;
+      }
+      // 多个工作表：让老师选（学校表格常把多个班/多次考试放进一个文件）
+      setSheetPick({ fileName: file.name, sheets });
     } catch (e) {
       alert(`读表失败：${e instanceof Error ? e.message : String(e)}`);
     }
   };
-  const confirmImport = async (mapping: ImportMapping) => {
+  const startImportFlow = (fileName: string, sheet: SheetTable) => {
+    const { table, name } = { table: sheet.table, name: sheet.name };
+    const sketch = detect(table);
+    const mapping = map(table, sketch, [], {});
+    setSheetPick(null);
+    setPendingImport({
+      fileName: `${fileName}（${name}）`,
+      table,
+      sketchHeaderRows: sketch.headerRows,
+      mapping,
+    });
+  };
+  const confirmImport = (mapping: ImportMapping) => {
     if (!pendingImport) return;
     const examLabels: Record<number, string> = {};
     for (const c of mapping.columns) {
       if (c.attempt) examLabels[c.attempt] = mapping.examLabels[c.attempt] ?? `第${c.attempt}次`;
     }
     const result = commit(data, pendingImport.table, mapping, { examLabels });
-    await persist(result.data);
+    void persist(result.data);
     setPendingImport(null);
-    alert(
-      [
-        `导入完成：新增学生 ${result.report.studentsCreated} 人（匹配已有 ${result.report.studentsMatched}）`,
-        `新增考试 ${result.report.examsCreated} 场，写入分数 ${result.report.scoresWritten} 行`,
-        ...(result.report.droppedRows.length
-          ? [`未导入行：${result.report.droppedRows.map((d) => `r${d.row} ${d.reason}`).join('；')}`]
-          : []),
-        ...result.report.warnings.slice(0, 6),
-      ].join('\n'),
-    );
+    setImportResult({ fileName: pendingImport.fileName, report: result.report });
   };
 
   const scopeStudents = myStudents(data.students, data.settings.advisor);
@@ -148,7 +166,7 @@ export default function App() {
       <input
         ref={importFileRef}
         type="file"
-        accept=".xlsx,.xlsm"
+        accept=".xlsx,.xlsm,.csv"
         style={{ display: 'none' }}
         onChange={(e) => {
           const f = e.target.files?.[0];
@@ -167,6 +185,7 @@ export default function App() {
             onGoTodos={() => setTab('todos')}
             onGoWeekly={() => setWeeklyOpen(true)}
             onOpenSearch={() => setSearchOpen(true)}
+            onGoImport={openImportPicker}
           />
         )}
         {tab === 'students' &&
@@ -203,7 +222,7 @@ export default function App() {
 
       {examsOpen && (
         <div className="screen-overlay">
-          <ExamsScreen data={data} onOpenStudent={setDetailId} onBack={() => setExamsOpen(false)} />
+          <ExamsScreen data={data} onOpenStudent={setDetailId} onBack={() => setExamsOpen(false)} onUpdate={persist} />
         </div>
       )}
 
@@ -226,21 +245,51 @@ export default function App() {
         <SearchOverlay data={data} onClose={() => setSearchOpen(false)} onOpenStudent={setDetailId} />
       )}
 
+      {sheetPick && (
+        <div className="sheet-mask" onClick={() => setSheetPick(null)}>
+          <div className="sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-head">
+              <h2 className="card-title">这份文件里有 {sheetPick.sheets.length} 个工作表</h2>
+              <button className="icon-btn" aria-label="关闭" onClick={() => setSheetPick(null)}>
+                <IconClose size={18} />
+              </button>
+            </div>
+            <p className="muted">选一个要导入的（括号里是它的行数）。</p>
+            <ul className="list student-pick-list">
+              {sheetPick.sheets.map((s) => (
+                <li key={s.name}>
+                  <button className="row compact" onClick={() => startImportFlow(sheetPick.fileName, s)}>
+                    <span className="row-main">
+                      <span className="row-name">{s.name || '(未命名)'}</span>
+                      <span className="row-sub">{s.table.length} 行</span>
+                    </span>
+                    <span className="row-side">›</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
       {plusOpen && (
         <div className="sheet-mask" onClick={() => setPlusOpen(false)}>
           <div className="sheet" onClick={(e) => e.stopPropagation()}>
-            <h2 className="card-title">添加</h2>
+            <div className="sheet-head">
+              <h2 className="card-title">添加</h2>
+              <button className="icon-btn" aria-label="关闭" onClick={() => setPlusOpen(false)}>
+                <IconClose size={18} />
+              </button>
+            </div>
             <div className="plus-grid">
-              {(
-                [
-                  ['沟通', () => { setQuickType('沟通'); setQuickOpen(true); setPlusOpen(false); }],
-                  ['谈心', () => { setQuickType('谈心'); setQuickOpen(true); setPlusOpen(false); }],
-                  ['家访', () => { setQuickType('家访'); setQuickOpen(true); setPlusOpen(false); }],
-                  ['其他', () => { setQuickType('其他'); setQuickOpen(true); setPlusOpen(false); }],
-                ] as [string, () => void][]
-              ).map(([t, go]) => (
-                <button key={t} className="quick-btn" onClick={go}>
-                  {t}
+              {QUICK_TYPES.map(([t, IconCmp]) => (
+                <button
+                  key={t}
+                  className="quick-btn has-icon"
+                  onClick={() => { setQuickType(t); setQuickOpen(true); setPlusOpen(false); }}
+                >
+                  <IconCmp size={20} />
+                  <span>{t}</span>
                 </button>
               ))}
             </div>
@@ -259,8 +308,8 @@ export default function App() {
               </button>
               <button className="row compact" onClick={openImportPicker}>
                 <span className="row-main">
-                  <span className="row-name">导入成绩表（.xlsx）</span>
-                  <span className="row-sub">自动识别列，确认后落库</span>
+                  <span className="row-name row-with-icon"><IconImport size={18} /> 导入成绩表</span>
+                  <span className="row-sub">Excel / CSV 文件，自动识别列</span>
                 </span>
                 <span className="row-side">›</span>
               </button>
@@ -308,26 +357,40 @@ export default function App() {
         <ImportConfirmSheet
           pending={pendingImport}
           onCancel={() => setPendingImport(null)}
-          onConfirm={(m) => void confirmImport(m)}
+          onConfirm={confirmImport}
+        />
+      )}
+
+      {importResult && (
+        <ImportResultSheet
+          fileName={importResult.fileName}
+          report={importResult.report}
+          onClose={() => setImportResult(null)}
         />
       )}
 
       {detailId == null && !weeklyOpen && !examsOpen && !recordsOpen && !pendingImport && (
         <nav className="tabbar">
           <button className={`tabbar-item${tab === 'home' ? ' active' : ''}`} onClick={() => setTab('home')}>
-            今日
+            <IconToday size={22} />
+            <span>今日</span>
           </button>
           <button className={`tabbar-item${tab === 'students' ? ' active' : ''}`} onClick={() => setTab('students')}>
-            学生
+            <IconStudents size={22} />
+            <span>学生</span>
           </button>
           <button className="tabbar-plus" aria-label="添加" onClick={() => setPlusOpen(true)}>
-            <span className="plus-disc">＋</span>
+            <span className="plus-disc">
+              <IconPlus size={24} />
+            </span>
           </button>
           <button className={`tabbar-item${tab === 'todos' ? ' active' : ''}`} onClick={() => setTab('todos')}>
-            待办
+            <IconTodos size={22} />
+            <span>待办</span>
           </button>
           <button className={`tabbar-item${tab === 'mine' ? ' active' : ''}`} onClick={() => setTab('mine')}>
-            我的
+            <IconMine size={22} />
+            <span>我的</span>
           </button>
         </nav>
       )}

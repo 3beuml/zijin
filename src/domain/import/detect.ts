@@ -17,7 +17,29 @@ const SUBJECT_WORDS = [
   '语文', '数学', '英语', '物理', '化学', '生物', '政治', '历史', '地理', '科学', '道法',
 ];
 
+/** 表头词表：判断一行是表头还是「人名 + 缺考」的数据行 */
+const HEADER_VOCAB = [
+  ...SUBJECT_WORDS,
+  '姓名', '名字', '班级', '班别', '导师', '总分', '浮动', '级名', '名次', '排名',
+  '班名', '分数', '成绩', '得分', '分层', '层', '学号', '考号', '序号', '号',
+  '教师', '老师', '班主任', '任课', '均分', '平均', '性别', '备注', '宿舍', '日期',
+];
+
 const SUMMARY_NAME_RE = /^(班级|全班)?\s*(平均|合计|均分|总分|总计|小计)/;
+
+/** 显式缺考标记：这些词出现在分数列里是「缺考」而不是坏数据 */
+const ABSENT_MARK_RE = /^(缺考|旷考|旷|病假|事假|免考|休学|请假|未考|—|－|－+|-+|\/)$/;
+
+/** 全角数字/句点 → 半角（「８８」「８８．５」也是数字） */
+function halfWidth(s: string): string {
+  return s
+    .replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
+    .replace(/．/g, '.');
+}
+
+/** 裸列归并只认「纯量词表头」：级名/名次/班名/排名/分数/成绩/得分/分层/层 + 可选次别数字。
+ *  长表头（如「道德与法治分数」）是未识别科目的独立列，挂到左边科目组会张冠李戴。 */
+const BARE_HEADER_RE = /^(级名|名次|班名|排名|分数|成绩|得分|分层|层)\d{0,2}$/;
 
 /** 归一化单元格：字符串去首尾空白；空白串视作 null */
 function norm(v: Cell): Cell {
@@ -31,8 +53,8 @@ function norm(v: Cell): Cell {
 
 function isNum(v: Cell): boolean {
   if (typeof v === 'number') return Number.isFinite(v);
-  // 文本形式的数字（如「88.5」）也标志着数据行开始
-  if (typeof v === 'string') return /^-?\d+(\.\d+)?$/.test(v);
+  // 文本形式的数字（如「88.5」、全角「８８」）也标志着数据行开始
+  if (typeof v === 'string') return /^-?\d+(\.\d+)?$/.test(halfWidth(v));
   return false;
 }
 
@@ -43,9 +65,9 @@ function nonEmptyCount(row: Cell[]): number {
 /** 从表头格文本里剥出 (subject, stem, attempt) */
 function splitHeader(text: string): { subject?: string; stem: string; attempt?: number } {
   let s = text.trim();
-  // 次别后缀：总分1 / 分数2 / 级名1 —— 数字是次别不是层级
+  // 次别后缀：总分1 / 分数2 / 级名1 —— 数字是次别不是层级（4+ 也能剥出，交给警告提示）
   let attempt: number | undefined;
-  const m = s.match(/([123])$/);
+  const m = s.match(/([1-9])$/);
   if (m && s.length > 1 && /[\u4e00-\u9fa5]$/.test(s.slice(0, -1))) {
     attempt = Number(m[1]);
     s = s.slice(0, -1);
@@ -89,18 +111,29 @@ export function detect(table: Cell[][]): StructureSketch {
 
   const at = (r: number, c: number): Cell => norm(table[r]?.[c] ?? null);
 
-  // ---- 1. 表头行数：从顶部往下，第一个含数字的行是数据首行 ----
+  // ---- 1. 表头行数：从顶部往下，第一个含数字/缺考标记/人名的行是数据首行 ----
+  // （「张三｜缺考」这种全文本数据行会被误认成表头——2026-11 修）
   let headerRowCount = 0;
   let titleText: string | null = null;
   const titleRowIdx: number[] = [];
   for (let r = 0; r < Math.min(rows, 6); r++) {
     const numeric = table[r].filter((c) => isNum(norm(c))).length;
     if (numeric >= 1) break;
+    const strVals = table[r].map((c) => norm(c)).filter((c): c is string => typeof c === 'string');
+    // 缺考标记只会出现在数据行
+    if (strVals.some((v) => ABSENT_MARK_RE.test(halfWidth(v)))) break;
     // 标题行：所有非空格都是同一句长文本（合并单元格会被 exceljs 复制到每个格子）
-    const vals = [...new Set(table[r].map((c) => norm(c)).filter((c): c is string => typeof c === 'string'))];
+    const vals = [...new Set(strVals)];
     if (headerRowCount === 0 && vals.length === 1 && vals[0].length >= 6) {
       titleText = vals[0];
       titleRowIdx.push(r);
+      headerRowCount++;
+      continue;
+    }
+    // 人名伪装表头：首个非空格是短文本且不含任何表头词 → 数据区开始
+    const firstNonEmpty = table[r].map((c) => norm(c)).find((c) => c != null);
+    if (typeof firstNonEmpty === 'string' && !HEADER_VOCAB.some((w) => firstNonEmpty.includes(w))) {
+      break;
     }
     headerRowCount++;
   }
@@ -202,6 +235,8 @@ export function detect(table: Cell[][]): StructureSketch {
   for (const col of cols) {
     if (col.subject) continue;
     if (col.role !== 'exam.rank' && col.role !== 'tier' && col.role !== 'subject.score') continue;
+    // 只归并「纯量词表头」（级名2/名次/分数…）；长表头留给确认页人工指定
+    if (!BARE_HEADER_RE.test(col.header.replace(/\s+/g, ''))) continue;
     // 向左找最近的科目列
     let anchor: number | null = null;
     for (let i = col.index - 1; i >= 1; i--) {
@@ -246,6 +281,23 @@ export function detect(table: Cell[][]): StructureSketch {
     else if (col.role === 'subject.score' && col.attempt !== 1) g.columns.score = col.index;
   }
 
+  // ---- 6.5 无科目且未归并的分数/分层列：留给确认页，并给 warning ----
+  for (const col of cols) {
+    if (col.subject) continue;
+    // exam.rank 不需要科目（那是总分名次列），其余量词列没有科目就导不进去
+    if (col.role !== 'subject.score' && col.role !== 'tier') continue;
+    warnings.push(
+      `列 ${col.index}「${col.header}」没认出科目词，默认不导入；如需导入请在确认页为它填科目名`,
+    );
+  }
+
+  // ---- 6.6 次别超出常规范围（1~3）的列：给 warning，请老师在确认页核对 ----
+  for (const col of cols) {
+    if (col.attempt == null || col.attempt <= 3) continue;
+    if (!['exam.rank', 'exam.total', 'subject.score', 'subject.rank', 'subject.rankPrev', 'tier'].includes(col.role)) continue;
+    warnings.push(`列 ${col.index}「${col.header}」的次别是第${col.attempt}次，超出支持范围（当前支持第1~3次），请在确认页核对该列`);
+  }
+
   // ---- 7. 派生列 ----
   const derivedColumns: DerivedColumn[] = [];
   for (const col of cols) {
@@ -269,6 +321,7 @@ export function detect(table: Cell[][]): StructureSketch {
   }
   let emptyRows = 0;
   const rowSig = new Map<string, number>();
+  const absentMarkCols: Map<number, { n: number; sample: string }> = new Map();
   const textScoreCols: Map<number, { n: number; sample: string }> = new Map();
   for (let r = dataStartIdx; r <= endIdx; r++) {
     if (nonEmptyCount(table[r]) === 0) { emptyRows++; continue; }
@@ -278,18 +331,22 @@ export function detect(table: Cell[][]): StructureSketch {
     } else {
       rowSig.set(sig, r);
     }
-    // 分数/名次列里的文本值
+    // 分数/名次列里的文本值：缺考标记 / 全角数字（可正常导入）/ 其他文本，分开提示
     for (const col of cols) {
       if (col.role !== 'subject.score' && col.role !== 'subject.rank' && col.role !== 'exam.total') continue;
       const v = at(r, col.index - 1);
-      if (typeof v === 'string') {
-        const rec = textScoreCols.get(col.index) ?? { n: 0, sample: v };
-        rec.n++;
-        textScoreCols.set(col.index, rec);
-      }
+      if (typeof v !== 'string') continue;
+      if (isNum(v)) continue; // 全角/文本数字能正常导入，不算坏数据
+      const target = ABSENT_MARK_RE.test(halfWidth(v)) ? absentMarkCols : textScoreCols;
+      const rec = target.get(col.index) ?? { n: 0, sample: v };
+      rec.n++;
+      target.set(col.index, rec);
     }
   }
   if (emptyRows > 0) warnings.push(`数据区含 ${emptyRows} 个空行，导入时将跳过`);
+  for (const [idx, rec] of absentMarkCols) {
+    warnings.push(`列 ${idx} 有 ${rec.n} 处「${rec.sample}」这类缺考标记，将按缺考（空）处理`);
+  }
   for (const [idx, rec] of textScoreCols) {
     warnings.push(`列 ${idx} 有 ${rec.n} 处文本值（如「${rec.sample}」），将按缺考（空）处理`);
   }

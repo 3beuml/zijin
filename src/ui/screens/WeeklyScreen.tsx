@@ -106,6 +106,7 @@ export function WeeklyScreen({
       )}
 
       <div className="register-wrap">
+        <div className="scroll-hint no-print">表格可左右滑动 →</div>
         <table className="register-table">
           <thead>
             <tr>
