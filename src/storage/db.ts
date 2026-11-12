@@ -12,7 +12,32 @@ const STORE = 'kv';
 const KEY_DATA = 'data';
 
 export function emptyData(): AppData {
-  return { version: 1, students: [], exams: [], scores: [], records: [] };
+  return {
+    version: 1,
+    students: [],
+    exams: [],
+    scores: [],
+    records: [],
+    todos: [],
+    settings: { advisor: '' },
+  };
+}
+
+/** 旧备份 / 旧库兼容：补齐 v0.2 新增的 todos 与 settings */
+export function normalizeData(raw: Partial<AppData> | null): AppData {
+  const base = emptyData();
+  if (!raw) return base;
+  return {
+    version: 1,
+    students: Array.isArray(raw.students) ? raw.students : base.students,
+    exams: Array.isArray(raw.exams) ? raw.exams : base.exams,
+    scores: Array.isArray(raw.scores) ? raw.scores : base.scores,
+    records: Array.isArray(raw.records) ? raw.records : base.records,
+    todos: Array.isArray(raw.todos) ? raw.todos : base.todos,
+    settings: raw.settings && typeof raw.settings === 'object'
+      ? { advisor: typeof raw.settings.advisor === 'string' ? raw.settings.advisor : '' }
+      : base.settings,
+  };
 }
 
 function openDb(): Promise<IDBDatabase> {
@@ -45,7 +70,10 @@ export async function loadData(): Promise<AppData | null> {
     return await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE, 'readonly');
       const req = tx.objectStore(STORE).get(KEY_DATA);
-      req.onsuccess = () => resolve((req.result as AppData | undefined) ?? null);
+      req.onsuccess = () => {
+        const raw = (req.result as AppData | undefined) ?? null;
+        resolve(raw ? normalizeData(raw) : null);
+      };
       req.onerror = () => reject(req.error ?? new Error('IndexedDB 读失败'));
     });
   } finally {

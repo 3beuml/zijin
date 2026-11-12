@@ -551,6 +551,136 @@ li:last-child > .row {
   width: 64px;
 }
 
+/* ---- 待办（v0.2）---- */
+.view-tabs {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.view-tab {
+  flex: 1;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink-600);
+  font: inherit;
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.view-tab.active {
+  background: var(--indigo-700);
+  border-color: var(--indigo-700);
+  color: #fff;
+  font-weight: 600;
+}
+
+.todo-row {
+  align-items: center;
+}
+
+.todo-check {
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid var(--ink-400);
+  border-radius: 50%;
+  background: none;
+  color: var(--success);
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+  cursor: pointer;
+  margin-right: var(--space-2);
+}
+
+.todo-row.done .row-name {
+  color: var(--ink-400);
+  text-decoration: line-through;
+}
+
+.todo-row.done .todo-check {
+  border-color: var(--success);
+}
+
+.todo-row.overdue .row-name::before {
+  content: '逾期 ';
+  color: var(--danger);
+  font-size: var(--text-xs);
+}
+
+.link-btn {
+  border: 0;
+  background: none;
+  color: var(--indigo-700);
+  font: inherit;
+  font-size: var(--text-xs);
+  padding: var(--space-1);
+  cursor: pointer;
+}
+
+.link-btn.danger {
+  color: var(--danger);
+}
+
+.followup-input {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  padding: var(--space-2);
+  font: inherit;
+  font-size: var(--text-sm);
+  background: var(--surface);
+  color: var(--ink-900);
+}
+
+/* ---- 底部弹层（待办表单）---- */
+.sheet-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(31, 35, 40, 0.4);
+  display: flex;
+  align-items: flex-end;
+  z-index: 20;
+}
+
+.sheet {
+  width: 100%;
+  background: var(--surface);
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  padding: var(--space-4);
+  padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+}
+
+.form-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.form-col input,
+.form-col select {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  padding: 0 var(--space-2);
+  font: inherit;
+  font-size: var(--text-md);
+  background: var(--surface);
+  color: var(--ink-900);
+}
+
+.form-row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.form-row > * {
+  flex: 1;
+  min-width: 0;
+}
+
 .btn-row {
   display: flex;
   gap: var(--space-2);

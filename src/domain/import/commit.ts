@@ -344,6 +344,8 @@ export function commit(
     exams,
     scores,
     records: existing.records.map((r) => ({ ...r })),
+    todos: existing.todos.map((t) => ({ ...t })),
+    settings: { ...existing.settings },
   };
 
   return {

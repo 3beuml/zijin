@@ -60,6 +60,26 @@ export interface RecordItem {
   createdAt: string; // ISO 时间戳，用于排序
 }
 
+/** 待办（v0.2，参考 teacher 的 Todo；逾期置顶、完成后可撤销） */
+export interface Todo {
+  id: string;
+  title: string;
+  type: string; // 家校 | 学生 | 教学 | 班级 | 行政
+  priority: 'high' | 'mid' | 'low';
+  due: string; // 'YYYY-MM-DD'
+  status: 'open' | 'done';
+  doneAt?: string; // ISO，完成后可撤销
+  studentId?: string; // 关联学生（跟进待办）
+  note?: string;
+  createdAt: string; // ISO
+}
+
+/** 应用设置（本地，不进外部验收契约的检查范围） */
+export interface Settings {
+  /** 「我是哪位导师」——分包视图的基准；空 = 未设置 */
+  advisor: string;
+}
+
 /** 全库形状（存储层 / 导出契约共用） */
 export interface AppData {
   version: 1;
@@ -67,6 +87,8 @@ export interface AppData {
   exams: Exam[];
   scores: Score[];
   records: RecordItem[];
+  todos: Todo[];
+  settings: Settings;
 }
 
 export const TOTAL_SUBJECT = '总分';

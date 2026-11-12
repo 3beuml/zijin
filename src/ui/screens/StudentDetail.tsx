@@ -1,12 +1,13 @@
-/** 学生详情：成绩（名次必带池标签）+ 浮动（同池才可比）+ 记录时间线 + 记一笔 */
+/** 学生详情：成绩（名次必带池标签）+ 浮动（同池才可比）+ 记录时间线 + 记一笔（含跟进待办） */
 import { useState } from 'react';
-import type { AppData, Exam } from '../../domain/types.ts';
+import type { AppData, Exam, Todo } from '../../domain/types.ts';
 import { TOTAL_SUBJECT } from '../../domain/types.ts';
 import { rankText } from '../../domain/pool.ts';
 import { findScore, rankDelta, totalFor } from '../../domain/score.ts';
 import { recordsOf } from '../../domain/weekly.ts';
+import { openTodosOf, toggleTodo } from '../../domain/todo.ts';
 import { fmtDelta, fmtScore } from '../../domain/format.ts';
-import { todayStr } from '../util.ts';
+import { nowIso, todayStr } from '../util.ts';
 
 const RECORD_TYPES = ['沟通', '谈心', '家访', '约谈', '其他'];
 
@@ -15,17 +16,29 @@ export function StudentDetail({
   studentId,
   onBack,
   onAddRecord,
+  onUpdate,
 }: {
   data: AppData;
   studentId: string;
   onBack: () => void;
-  onAddRecord: (studentId: string, rec: { date: string; type: string; content: string }) => Promise<void>;
+  onAddRecord: (
+    studentId: string,
+    rec: { date: string; type: string; content: string },
+    followUp?: { title: string; due: string },
+  ) => Promise<void>;
+  onUpdate: (next: AppData) => Promise<void>;
 }) {
   const stu = data.students.find((s) => s.id === studentId);
   if (!stu) return <div className="page">学生不存在</div>;
 
   const exams = [...data.exams].sort((a, b) => a.order - b.order);
   const timeline = recordsOf(data.records, studentId);
+  const followUps = openTodosOf(data.todos, studentId);
+
+  const toggleFollowUp = async (t: Todo) => {
+    const todos = data.todos.map((x) => (x.id === t.id ? toggleTodo(x, nowIso()) : x));
+    await onUpdate({ ...data, todos });
+  };
 
   return (
     <div className="page">
@@ -49,7 +62,31 @@ export function StudentDetail({
         )}
       </section>
 
-      <RecordSection records={timeline} onAdd={(rec) => onAddRecord(studentId, rec)} />
+      {followUps.length > 0 && (
+        <section className="card">
+          <h2 className="card-title">跟进（{followUps.length}）</h2>
+          <ul className="list">
+            {followUps.map((t) => (
+              <li key={t.id}>
+                <div className="row compact todo-row">
+                  <button className="todo-check" aria-label="标记完成" onClick={() => void toggleFollowUp(t)}>
+                    {t.status === 'done' ? '✓' : ''}
+                  </button>
+                  <span className="row-main">
+                    <span className="row-name">{t.title}</span>
+                    <span className="row-sub">{t.due === todayStr() ? '今天到期' : t.due}</span>
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <RecordSection
+        records={timeline}
+        onAdd={(rec, followUp) => onAddRecord(studentId, rec, followUp)}
+      />
     </div>
   );
 }
@@ -117,18 +154,29 @@ function RecordSection({
   onAdd,
 }: {
   records: AppData['records'];
-  onAdd: (rec: { date: string; type: string; content: string }) => Promise<void>;
+  onAdd: (
+    rec: { date: string; type: string; content: string },
+    followUp?: { title: string; due: string },
+  ) => Promise<void>;
 }) {
   const [type, setType] = useState(RECORD_TYPES[0]);
   const [date, setDate] = useState(todayStr());
   const [content, setContent] = useState('');
+  const [followUp, setFollowUp] = useState('');
+  const [followUpDue, setFollowUpDue] = useState('');
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
     if (!content.trim() || saving) return;
     setSaving(true);
-    await onAdd({ date, type, content: content.trim() });
+    const hasFollowUp = followUp.trim() !== '';
+    await onAdd(
+      { date, type, content: content.trim() },
+      hasFollowUp ? { title: followUp, due: followUpDue || todayStr() } : undefined,
+    );
     setContent('');
+    setFollowUp('');
+    setFollowUpDue('');
     setSaving(false);
   };
 
@@ -150,6 +198,15 @@ function RecordSection({
           onChange={(e) => setContent(e.target.value)}
           rows={2}
         />
+        <input
+          className="followup-input"
+          placeholder="跟进（可选）：如 下周三前再回访一次"
+          value={followUp}
+          onChange={(e) => setFollowUp(e.target.value)}
+        />
+        {followUp.trim() !== '' && (
+          <input type="date" value={followUpDue} onChange={(e) => setFollowUpDue(e.target.value)} aria-label="跟进截止" />
+        )}
         <button className="btn primary" disabled={!content.trim() || saving} onClick={submit}>
           保存
         </button>

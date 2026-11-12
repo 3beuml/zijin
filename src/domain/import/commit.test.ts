@@ -14,7 +14,15 @@ async function load(name: string): Promise<Cell[][]> {
   return table as Cell[][];
 }
 
-const empty: AppData = { version: 1, students: [], exams: [], scores: [], records: [] };
+const empty: AppData = {
+  version: 1,
+  students: [],
+  exams: [],
+  scores: [],
+  records: [],
+  todos: [],
+  settings: { advisor: '' },
+};
 
 async function runStandard() {
   const table = await load('standard');

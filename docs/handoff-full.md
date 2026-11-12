@@ -201,3 +201,22 @@ node scripts/accept.mjs dump.json
   （「文件名、目录名或卷标语法不正确」），改用正斜杠 `C:/Users/...` 解决。
   ④APK 带 INTERNET 权限（Capacitor 模板默认）；本应用实际不联网，
   正式签名版可以考虑去掉——留给下一个任务。
+
+## 阶段 6 完成（v0.2 · 参考 teacher 重构 #1：待办 + 跟进）
+- 背景：用户看完 teacher 仓库的设计后拍板搬四块：待办+跟进、分包视角、今日页、周手册登记表。
+  本段是第一块，也是其他两块（今日页、周手册「下周重点」）的依赖。
+- 实际做了什么：
+  - **数据模型新增 `Todo` 实体与 `Settings`**（AppData 加 `todos` / `settings.advisor`，version 仍为 1，
+    旧备份经 `normalizeData` 补齐后可恢复——用户已在选项中确认此数据结构变更）。
+  - `src/domain/todo.ts`：todoViews（逾期置顶/今日/之后/已完成四视图）、todosDueBetween、
+    nextWeekTodos（周手册「下周重点」用）、openTodosOf、toggleTodo、followUpTodo。8 个新单测。
+  - `TodosScreen`：今日/本周/全部/已完成，逾期红色置顶、完成删除线可撤销、底部弹层新建/编辑
+    （标题/类型/优先级/截止/关联学生），删除有确认。
+  - 学生详情「记一笔」加**跟进字段**（内容+截止）→ 保存时同时生成关联该学生的待办；
+    详情页新增「跟进」卡显示未完成待办，可直接勾选完成。
+  - 导航 4 标签（学生/待办/周手册/我的）。
+- 闸门结果：`npx vitest run` → 80/80；build 通过；accept.mjs 对含 todos/settings 的 dump 仍 7/7 通过
+  （外部契约不检查多余字段，向旧验收脚本兼容）。
+- 与原计划的偏差：teacher 的记录→待办是「跟进」字段一键生成，字段表里叫「跟进待办」；
+  子衿做成记录表单里的可选输入+截止日，语义一致。状态颜色沿用 design-ui 的语义色（不做蓝灰「进行中」态，
+  v0.1 记录粒度用不上）。

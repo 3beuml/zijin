@@ -28,7 +28,7 @@ const demoRecord = args.includes('--demo-record');
 const { table, sheetName } = await readTable(file);
 const sketch = detect(table);
 const mapping = map(table, sketch, [], label ? { defaultExamLabel: label } : {});
-const empty = { version: 1, students: [], exams: [], scores: [], records: [] };
+const empty = { version: 1, students: [], exams: [], scores: [], records: [], todos: [], settings: { advisor: '' } };
 const { data, report } = commit(empty, table, mapping, {
   examLabels: label ? { 2: label } : {},
 });

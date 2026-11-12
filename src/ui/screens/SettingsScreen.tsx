@@ -11,6 +11,7 @@ import { commit } from '../../domain/import/commit.ts';
 import type { ImportMapping, SketchRole } from '../../domain/import/types.ts';
 import { downloadFile } from '../print.ts';
 import { todayStr } from '../util.ts';
+import { normalizeData } from '../../storage/db.ts';
 
 const ROLES: SketchRole[] = [
   'student.name', 'student.class', 'exam.total', 'exam.rank',
@@ -93,8 +94,11 @@ export function SettingsScreen({
       if (parsed.version !== 1 || !Array.isArray(parsed.students) || !Array.isArray(parsed.records)) {
         throw new Error('不是子衿的备份文件（version/字段不符）');
       }
-      await onImported(parsed);
-      alert(`已恢复：${parsed.students.length} 名学生，${parsed.records.length} 条记录`);
+      const normalized = normalizeData(parsed);
+      await onImported(normalized);
+      alert(
+        `已恢复：${normalized.students.length} 名学生，${normalized.records.length} 条记录，${normalized.todos.length} 条待办`,
+      );
     } catch (e) {
       alert(`恢复失败：${e instanceof Error ? e.message : String(e)}`);
     }

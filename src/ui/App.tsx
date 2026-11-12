@@ -1,17 +1,17 @@
 /**
- * 子衿 · 应用壳：底部三标签（学生 / 周手册 / 我的）。
- * 设计导航是五标签（今日|学生|成绩|待办|我的），今晚范围只做三个——
- * 待办、课表被明确砍掉（见 handoff-full「明确砍掉的」）。
+ * 子衿 · 应用壳：底部五标签（今日 / 学生 / 待办 / 周手册 / 我的）。
+ * design-ui 的导航上限是 5；成绩并入学生详情，课表暂不做。
  */
 import { useEffect, useState } from 'react';
-import type { AppData, RecordItem } from '../domain/types.ts';
+import type { AppData, RecordItem, Todo } from '../domain/types.ts';
 import { emptyData, loadData, saveData, clearData } from '../storage/db.ts';
 import { StudentsScreen } from './screens/StudentsScreen';
 import { StudentDetail } from './screens/StudentDetail';
 import { WeeklyScreen } from './screens/WeeklyScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { TodosScreen } from './screens/TodosScreen';
 
-type Tab = 'students' | 'weekly' | 'mine';
+type Tab = 'students' | 'todos' | 'weekly' | 'mine';
 
 export default function App() {
   const [data, setData] = useState<AppData | null>(null);
@@ -40,11 +40,29 @@ export default function App() {
     }
   };
 
-  const addRecord = async (studentId: string, rec: Omit<RecordItem, 'id' | 'studentId' | 'createdAt'>) => {
+  const addRecord = async (
+    studentId: string,
+    rec: Omit<RecordItem, 'id' | 'studentId' | 'createdAt'>,
+    followUp?: { title: string; due: string },
+  ) => {
     const id = `r${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`;
+    const todos: Todo[] = [...data.todos];
+    if (followUp && followUp.title.trim()) {
+      todos.push({
+        id: `t${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`,
+        title: followUp.title.trim(),
+        type: '家校',
+        priority: 'mid',
+        due: followUp.due,
+        status: 'open',
+        studentId,
+        createdAt: new Date().toISOString(),
+      });
+    }
     await persist({
       ...data,
       records: [...data.records, { ...rec, id, studentId, createdAt: new Date().toISOString() }],
+      todos,
     });
   };
 
@@ -63,10 +81,12 @@ export default function App() {
               studentId={detailId}
               onBack={() => setDetailId(null)}
               onAddRecord={addRecord}
+              onUpdate={persist}
             />
           ) : (
             <StudentsScreen data={data} onOpenStudent={setDetailId} />
           ))}
+        {tab === 'todos' && <TodosScreen data={data} onUpdate={persist} />}
         {tab === 'weekly' && <WeeklyScreen data={data} onOpenStudent={setDetailId} />}
         {tab === 'mine' && <SettingsScreen data={data} onImported={persist} onWipe={wipeAll} />}
       </main>
@@ -75,6 +95,9 @@ export default function App() {
         <nav className="tabbar">
           <button className={`tabbar-item${tab === 'students' ? ' active' : ''}`} onClick={() => setTab('students')}>
             学生
+          </button>
+          <button className={`tabbar-item${tab === 'todos' ? ' active' : ''}`} onClick={() => setTab('todos')}>
+            待办
           </button>
           <button className={`tabbar-item${tab === 'weekly' ? ' active' : ''}`} onClick={() => setTab('weekly')}>
             周手册
