@@ -19,6 +19,7 @@ export function HomeScreen({
   onGoStudents,
   onGoTodos,
   onGoWeekly,
+  onOpenSearch,
 }: {
   data: AppData;
   onUpdate: (next: AppData) => Promise<void>;
@@ -26,6 +27,7 @@ export function HomeScreen({
   onGoStudents: () => void;
   onGoTodos: () => void;
   onGoWeekly: () => void;
+  onOpenSearch: () => void;
 }) {
   const today = todayStr();
   const [quickType, setQuickType] = useState<string | null>(null);
@@ -61,6 +63,10 @@ export function HomeScreen({
     <div className="page">
       <h1 className="page-title">今日</h1>
       <div className="summary-line">{dateLabel}</div>
+
+      <button className="search fake" onClick={onOpenSearch} aria-label="全局搜索">
+        搜学生 / 记录 / 待办…
+      </button>
 
       {/* 周手册入口（design-ui：周手册放今日页顶部入口） */}
       <section className="card weekly-entry" onClick={onGoWeekly} role="button" aria-label="打开周手册">

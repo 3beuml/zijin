@@ -4,7 +4,7 @@
  */
 import { useEffect, useState } from 'react';
 import type { AppData, RecordItem, Todo } from '../domain/types.ts';
-import { emptyData, loadData, saveData, clearData } from '../storage/db.ts';
+import { emptyData, loadData, saveData, clearData, takeDailySnapshot } from '../storage/db.ts';
 import { HomeScreen } from './screens/HomeScreen';
 import { StudentsScreen } from './screens/StudentsScreen';
 import { StudentDetail } from './screens/StudentDetail';
@@ -12,6 +12,7 @@ import { RecordsScreen } from './screens/RecordsScreen';
 import { WeeklyScreen } from './screens/WeeklyScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { TodosScreen } from './screens/TodosScreen';
+import { SearchOverlay } from './components/SearchOverlay.tsx';
 
 type Tab = 'home' | 'students' | 'records' | 'todos' | 'mine';
 
@@ -21,11 +22,15 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('home');
   const [detailId, setDetailId] = useState<string | null>(null);
   const [weeklyOpen, setWeeklyOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     loadData().then((d) => {
-      setData(d ?? emptyData());
+      const next = d ?? emptyData();
+      setData(next);
       setLoaded(true);
+      // 每天首次打开自动快照（失败不打扰使用，只是少了保险）
+      takeDailySnapshot(next, new Date().toISOString().slice(0, 10)).catch(() => {});
     });
   }, []);
 
@@ -85,6 +90,7 @@ export default function App() {
             onGoStudents={() => setTab('students')}
             onGoTodos={() => setTab('todos')}
             onGoWeekly={() => setWeeklyOpen(true)}
+            onOpenSearch={() => setSearchOpen(true)}
           />
         )}
         {tab === 'students' &&
@@ -113,6 +119,10 @@ export default function App() {
 
       {weeklyOpen && (
         <WeeklyScreen data={data} onOpenStudent={setDetailId} onBack={() => setWeeklyOpen(false)} />
+      )}
+
+      {searchOpen && (
+        <SearchOverlay data={data} onClose={() => setSearchOpen(false)} onOpenStudent={setDetailId} />
       )}
 
       {detailId == null && !weeklyOpen && (

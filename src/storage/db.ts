@@ -103,3 +103,83 @@ export async function clearData(): Promise<void> {
     db.close();
   }
 }
+
+/* ---- 每日快照（v0.3，参考 teacher §8.4：保留最近 7 天）---- */
+
+const SNAP_PREFIX = 'snap-';
+const SNAP_KEEP = 7;
+
+export interface Snapshot {
+  date: string; // 'YYYY-MM-DD'，即快照键
+  data: AppData;
+}
+
+/** 每天首次打开时拍一次快照；当天已有则跳过；超过 7 份删最旧的 */
+export async function takeDailySnapshot(data: AppData, today: string): Promise<boolean> {
+  const db = await openDb();
+  try {
+    const existing = await new Promise<AppData | undefined>((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readonly');
+      const req = tx.objectStore(STORE).get(SNAP_PREFIX + today);
+      req.onsuccess = () => resolve(req.result as AppData | undefined);
+      req.onerror = () => reject(req.error ?? new Error('快照读取失败'));
+    });
+    if (existing) return false; // 今天已经拍过
+
+    const all = await new Promise<{ key: string; data: AppData }[]>((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readonly');
+      const out: { key: string; data: AppData }[] = [];
+      const req = tx.objectStore(STORE).openCursor();
+      req.onsuccess = () => {
+        const cur = req.result;
+        if (cur) {
+          const key = String(cur.key);
+          if (key.startsWith(SNAP_PREFIX)) out.push({ key, data: cur.value as AppData });
+          cur.continue();
+        } else {
+          resolve(out);
+        }
+      };
+      req.onerror = () => reject(req.error ?? new Error('快照遍历失败'));
+    });
+
+    const tx = db.transaction(STORE, 'readwrite');
+    const store = tx.objectStore(STORE);
+    store.put(data, SNAP_PREFIX + today);
+    const stale = all
+      .map((s) => s.key.slice(SNAP_PREFIX.length))
+      .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
+      .sort((a, b) => b.localeCompare(a))
+      .slice(SNAP_KEEP - 1); // 旧的（保留 7 份含今天）
+    for (const d of stale) store.delete(SNAP_PREFIX + d);
+    await txDone(tx);
+    return true;
+  } finally {
+    db.close();
+  }
+}
+
+/** 快照列表（新在前） */
+export async function listSnapshots(): Promise<Snapshot[]> {
+  const db = await openDb();
+  try {
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readonly');
+      const out: Snapshot[] = [];
+      const req = tx.objectStore(STORE).openCursor();
+      req.onsuccess = () => {
+        const cur = req.result;
+        if (cur) {
+          const key = String(cur.key);
+          if (key.startsWith(SNAP_PREFIX)) out.push({ date: key.slice(SNAP_PREFIX.length), data: cur.value as AppData });
+          cur.continue();
+        } else {
+          resolve(out.sort((a, b) => b.date.localeCompare(a.date)));
+        }
+      };
+      req.onerror = () => reject(req.error ?? new Error('快照遍历失败'));
+    });
+  } finally {
+    db.close();
+  }
+}

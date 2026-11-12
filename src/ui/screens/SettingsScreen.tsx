@@ -2,7 +2,7 @@
  * 我的：导入成绩表（detect → map → 【人工确认】→ commit）、恢复 JSON、清空数据。
  * 备份导出与打印在阶段 4。
  */
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AppData } from '../../domain/types.ts';
 import { tableFromBuffer } from '../../lib/xlsx.ts';
 import { detect } from '../../domain/import/detect.ts';
@@ -12,7 +12,7 @@ import { distinctAdvisors } from '../../domain/students.ts';
 import type { ImportMapping, SketchRole } from '../../domain/import/types.ts';
 import { downloadFile } from '../print.ts';
 import { todayStr } from '../util.ts';
-import { normalizeData } from '../../storage/db.ts';
+import { normalizeData, listSnapshots, type Snapshot } from '../../storage/db.ts';
 
 const ROLES: SketchRole[] = [
   'student.name', 'student.class', 'exam.total', 'exam.rank',
@@ -57,7 +57,20 @@ export function SettingsScreen({
   const fileRef = useRef<HTMLInputElement>(null);
   const restoreRef = useRef<HTMLInputElement>(null);
   const [wipeArmed, setWipeArmed] = useState(false);
+  const [snaps, setSnaps] = useState<Snapshot[]>([]);
   const advisors = distinctAdvisors(data.students);
+
+  useEffect(() => {
+    listSnapshots()
+      .then(setSnaps)
+      .catch(() => setSnaps([]));
+  }, []);
+
+  const restoreSnapshot = async (snap: Snapshot) => {
+    if (!confirm(`恢复到 ${snap.date} 的快照？会覆盖当前数据。`)) return;
+    await onImported(normalizeData(snap.data));
+    alert(`已恢复 ${snap.date} 的快照`);
+  };
 
   const openFile = async (file: File) => {
     setReport(null);
@@ -218,6 +231,25 @@ export function SettingsScreen({
               </button>
             </div>
           </section>
+
+          {snaps.length > 0 && (
+            <section className="card">
+              <h2 className="card-title">每日快照（自动保留 7 天）</h2>
+              <ul className="plain-list">
+                {snaps.map((s) => (
+                  <li key={s.date} className="snap-row">
+                    <span>
+                      {s.date} · {s.data.students.length} 学生 / {s.data.records.length} 记录
+                    </span>
+                    <button className="link-btn" onClick={() => void restoreSnapshot(s)}>
+                      恢复
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <p className="muted">每天首次打开 App 时自动拍一次；误删可回退。</p>
+            </section>
+          )}
 
           <section className="card">
             <h2 className="card-title">数据</h2>

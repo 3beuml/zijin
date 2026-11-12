@@ -922,6 +922,53 @@ li:last-child > .row {
   white-space: pre-wrap;
 }
 
+/* ---- 全局搜索（v0.3）---- */
+.search.fake {
+  display: block;
+  width: 100%;
+  text-align: left;
+  color: var(--ink-400);
+  cursor: pointer;
+  margin-bottom: var(--space-3);
+}
+
+.search-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--paper);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-3);
+  padding-top: calc(var(--space-3) + env(safe-area-inset-top));
+  overflow-y: auto;
+}
+
+.search-bar {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.search-bar input {
+  flex: 1;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  padding: 0 var(--space-3);
+  font: inherit;
+  font-size: var(--text-md);
+  background: var(--surface);
+  color: var(--ink-900);
+}
+
+.snap-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
 .btn-row {
   display: flex;
   gap: var(--space-2);
