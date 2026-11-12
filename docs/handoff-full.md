@@ -261,3 +261,12 @@ node scripts/accept.mjs dump.json
 - 闸门结果：`npx vitest run` → 90/90；build 通过。
 - 与原计划的偏差：teacher 的「日常」列在子衿里拆成「家访」+「其他」（子衿的记录类型不同）；
   Excel 列宽/样式按 33 人规模调的，A4 HTML 里保留记录明细表（Excel 里没有，避免两个出口内容完全重复）。
+
+## 阶段 10 完成（v0.2 交付）
+- 实际做了什么：浏览器端到端复验（数据灌入→今日页→快捷谈心→待办勾选→分包三态切换 33/17/16→
+  周手册登记表→Excel/A4 导出→Excel 用 exceljs 读回核验字段全部正确）→
+  `npm run build` + `cap sync` + `assembleDebug` 重打 APK，versionName 0.2.0，
+  交付 `子衿-v0.2-debug.apk`（4.8MB，旧的 v0.1 APK 已删除）；使用说明更新为 v0.2 四步法。
+- 闸门结果：90/90 单测全绿；build 通过；E2E 全程无控制台异常；aapt 验签 0.2.0。
+- 与原计划的偏差：E2E 里发现「点全班没反应」——排查后是测试脚本选择器歧义（列表行文本也含
+  「本周未联系」），应用本身无 bug，exact 匹配后三种视图全部正确。
