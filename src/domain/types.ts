@@ -27,6 +27,11 @@ export interface Student {
   name: string;
   classId: string;
   advisor: string; // 导师（分包），导入时必填校验
+  /** 以下为档案可编辑字段（v0.3）。不存电话/住址等敏感信息——遵守隐私契约 */
+  gender?: '男' | '女';
+  dorm?: string; // 宿舍（楼/房），自由文本
+  note?: string; // 备注（家庭情况概要、学业规划等，老师自己填）
+  tags?: string[]; // 标签（如「临界生」「手机管控」）
 }
 
 /** 考试次别：label + date + order（order 决定时间线上的先后） */

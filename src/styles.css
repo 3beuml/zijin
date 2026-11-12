@@ -901,6 +901,27 @@ li:last-child > .row {
   flex: 1;
 }
 
+/* ---- 档案卡（v0.3）---- */
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.profile-k {
+  color: var(--ink-400);
+  font-size: var(--text-xs);
+  margin-right: var(--space-2);
+}
+
+.profile-note {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--ink-600);
+  white-space: pre-wrap;
+}
+
 .btn-row {
   display: flex;
   gap: var(--space-2);

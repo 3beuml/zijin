@@ -9,6 +9,7 @@ import { openTodosOf, toggleTodo } from '../../domain/todo.ts';
 import { fmtDelta, fmtScore } from '../../domain/format.ts';
 import { nowIso, todayStr } from '../util.ts';
 import { RecordEditSheet } from '../components/RecordEditSheet.tsx';
+import { ProfileCard } from '../components/ProfileCard.tsx';
 
 const RECORD_TYPES = ['沟通', '谈心', '家访', '约谈', '其他'];
 
@@ -61,6 +62,8 @@ export function StudentDetail({
         {stu.classId ? `${stu.classId} 班 · ` : ''}
         {stu.advisor ? `导师 ${stu.advisor}` : '未分包'}
       </div>
+
+      <ProfileCard data={data} student={stu} onUpdate={onUpdate} />
 
       <section className="card">
         <h2 className="card-title">成绩</h2>
