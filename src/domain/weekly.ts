@@ -1,8 +1,9 @@
 /**
- * 周汇总：本周覆盖（每个学生本周有没有被记录过）+ 未覆盖名单。
+ * 周汇总：本周覆盖（每个学生本周有没有被记录过）+ 未覆盖名单 + 周登记表。
  * 周一为一周之始。
  */
-import type { RecordItem, Student } from './types.ts';
+import type { Exam, RankPool, RecordItem, Score, Student } from './types.ts';
+import { totalFor } from './score.ts';
 
 /** 'YYYY-MM-DD' → 当日所在周的 [周一, 周日]，均 'YYYY-MM-DD' */
 export function weekOf(date: string): { start: string; end: string } {
@@ -58,4 +59,70 @@ export function recordsOf(records: RecordItem[], studentId: string): RecordItem[
   return records
     .filter((r) => r.studentId === studentId)
     .sort((a, b) => (b.createdAt || b.date).localeCompare(a.createdAt || a.date));
+}
+
+/** 登记表一行：一个学生本周的次数 + 最近成绩 + 摘要（周手册 16 人表用） */
+export interface WeekRow {
+  student: Student;
+  countByType: Map<string, number>; // 记录类型 → 本周次数
+  count: number; // 本周总条数
+  summary: string; // 最近一条记录的内容（本周无记录 → ''）
+  total: number | null; // 最近一次考试的总分（现算）
+  rank: number | null; // 最近一次考试的总分名次
+  poolLabel: string; // 名次池标签（没有池则 ''）
+}
+
+/**
+ * 周登记表（参考 teacher 的周工作手册：每人一行）。
+ * 最近成绩取 order 最大的考试；名次带池标签。
+ */
+export function weeklyRegister(
+  students: Student[],
+  records: RecordItem[],
+  scores: Score[],
+  exams: Exam[],
+  refDate: string,
+): { start: string; end: string; rows: WeekRow[] } {
+  const { start, end } = weekOf(refDate);
+  const latestExam = [...exams].sort((a, b) => b.order - a.order)[0];
+
+  const rows = students.map((student) => {
+    const countByType = new Map<string, number>();
+    let summary = '';
+    let latest: RecordItem | null = null;
+    for (const r of records) {
+      if (r.studentId !== student.id || r.date < start || r.date > end) continue;
+      countByType.set(r.type, (countByType.get(r.type) ?? 0) + 1);
+      if (!latest || (r.createdAt || r.date) > (latest.createdAt || latest.date)) latest = r;
+    }
+    if (latest) summary = latest.content;
+
+    let total: number | null = null;
+    let rank: number | null = null;
+    let poolLabel = '';
+    if (latestExam) {
+      total = totalFor(scores, student.id, latestExam.id);
+      const totalScore = scores.find(
+        (s) => s.studentId === student.id && s.examId === latestExam.id && s.subject === '总分',
+      );
+      if (totalScore) {
+        rank = totalScore.rank;
+        const pool: RankPool = totalScore.pool;
+        poolLabel =
+          pool.scope === 'tier' ? `${pool.tier ?? ''}层内` : pool.scope === 'class' ? '班内' : '全年级';
+      }
+    }
+
+    return {
+      student,
+      countByType,
+      count: [...countByType.values()].reduce((a, b) => a + b, 0),
+      summary,
+      total,
+      rank,
+      poolLabel,
+    };
+  });
+
+  return { start, end, rows };
 }

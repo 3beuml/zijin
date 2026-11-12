@@ -777,6 +777,80 @@ li:last-child > .row {
   overflow-y: auto;
 }
 
+/* ---- 周手册登记表（v0.2）---- */
+.weekly-missing {
+  background: #fdf3e4;
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-control);
+  color: var(--warning);
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.register-wrap {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  overflow-x: auto;
+  margin-bottom: var(--space-3);
+}
+
+.register-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+  min-width: 480px;
+}
+
+.register-table th,
+.register-table td {
+  padding: var(--space-2) var(--space-1);
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.register-table th {
+  color: var(--ink-600);
+  font-weight: 600;
+  background: var(--indigo-100);
+}
+
+.register-table td.c,
+.register-table th.c {
+  text-align: center;
+}
+
+.register-table td.has {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.register-table tr.empty-row td {
+  color: var(--warning);
+}
+
+.register-table .summary-cell {
+  white-space: normal;
+  min-width: 120px;
+  max-width: 220px;
+}
+
+.register-table .num {
+  text-align: right;
+}
+
+.register-table td.num.c {
+  text-align: center;
+}
+
+.card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .btn-row {
   display: flex;
   gap: var(--space-2);

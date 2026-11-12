@@ -5,7 +5,10 @@
  * 本文件属界面层，允许用 window/navigator；不许反过来被 domain import。
  */
 import type { AppData } from '../domain/types.ts';
-import { weeklySummary } from '../domain/weekly.ts';
+import { myStudents } from '../domain/students.ts';
+import { nextWeekTodos } from '../domain/todo.ts';
+import { fmtScore } from '../domain/format.ts';
+import { weeklyRegister, weeklySummary } from '../domain/weekly.ts';
 import { shortDate } from './util.ts';
 
 function esc(s: string): string {
@@ -13,16 +16,46 @@ function esc(s: string): string {
 }
 
 export function buildWeeklyHtml(data: AppData, refDate: string, teacherLine = ''): string {
-  const week = weeklySummary(data.students, data.records, refDate);
+  const mine = myStudents(data.students, data.settings.advisor);
+  const scopeStudents = mine.length > 0 ? mine : data.students;
+  const reg = weeklyRegister(scopeStudents, data.records, data.scores, data.exams, refDate);
+  const week = weeklySummary(scopeStudents, data.records, refDate);
   const weekRecords = data.records
-    .filter((r) => r.date >= week.start && r.date <= week.end)
+    .filter((r) => r.date >= reg.start && r.date <= reg.end)
     .sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt));
   const nameOf = (id: string): string => data.students.find((s) => s.id === id)?.name ?? '?';
+  const advisorLabel = mine.length > 0 ? `分包 ${mine.length} 人` : `全班 ${data.students.length} 人`;
 
-  const uncoveredRows = week.uncovered
+  const typeCols = ['沟通', '谈心', '家访'];
+  const regRows = reg.rows
+    .map((row) => {
+      const last =
+        row.total == null
+          ? '—'
+          : `${fmtScore(row.total)}${row.rank != null ? `（${row.poolLabel}第 ${row.rank} 名）` : ''}`;
+      const count = (t: string): string => {
+        const n =
+          t === '其他'
+            ? [...row.countByType.entries()].filter(([k]) => !typeCols.includes(k)).reduce((n, [, c]) => n + c, 0)
+            : (row.countByType.get(t) ?? 0);
+        return n ? String(n) : '—';
+      };
+      return `<tr class="${row.count === 0 ? 'empty' : ''}">
+        <td>${esc(row.student.name)}</td>
+        ${typeCols.map((t) => `<td class="c">${count(t)}</td>`).join('')}
+        <td class="c">${count('其他')}</td>
+        <td>${esc(last)}</td>
+        <td>${esc(row.summary || '本周无记录')}</td>
+      </tr>`;
+    })
+    .join('');
+
+  const nextWeek = nextWeekTodos(data.todos, reg.end);
+  const nextRows = nextWeek
+    .slice(0, 10)
     .map(
-      (s) =>
-        `<tr><td>${esc(s.name)}</td><td>${esc(s.advisor || '未分包')}</td><td class="c">待联系</td></tr>`,
+      (t) =>
+        `<tr><td class="c" style="width:22mm">${esc(t.due)}</td><td>${esc(t.title)}${t.studentId ? `（${esc(nameOf(t.studentId))}）` : ''}</td></tr>`,
     )
     .join('');
 
@@ -37,7 +70,7 @@ export function buildWeeklyHtml(data: AppData, refDate: string, teacherLine = ''
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>子衿周手册 ${esc(week.start)} – ${esc(week.end)}</title>
+<title>子衿周手册 ${esc(reg.start)} – ${esc(reg.end)}</title>
 <style>
   @page { size: A4; margin: 15mm; }
   body { font-family: system-ui, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
@@ -50,21 +83,28 @@ export function buildWeeklyHtml(data: AppData, refDate: string, teacherLine = ''
   th, td { border: 1px solid #bbb; padding: 1.5mm 2mm; text-align: left; }
   th { background: #f2f0ec; }
   td.c, th.c { text-align: center; }
+  tr.empty td { color: #b4731f; }
   .foot { margin-top: 8mm; color: #888; font-size: 8.5pt; }
 </style>
 </head>
 <body>
-  <h1>周手册（${esc(shortDate(week.start))} – ${esc(shortDate(week.end))}）</h1>
-  <div class="meta">${esc(teacherLine)}学生 ${week.total} 人 · 本周记录 ${weekRecords.length} 条 · 生成于 ${esc(new Date().toLocaleDateString('zh-CN'))}</div>
-  <div class="kpi">本周已沟通 ${week.covered}/${week.total}</div>
+  <h1>周手册（${esc(shortDate(reg.start))} – ${esc(shortDate(reg.end))}）</h1>
+  <div class="meta">${esc(teacherLine)}${esc(advisorLabel)} · 本周记录 ${weekRecords.length} 条 · 生成于 ${esc(new Date().toLocaleDateString('zh-CN'))}</div>
+  <div class="kpi">本周已沟通 ${week.covered}/${scopeStudents.length}</div>
 
-  <h2>本周未覆盖（${week.uncovered.length} 人）</h2>
+  <h2>登记表（每人一行）</h2>
   <table>
-    <thead><tr><th>姓名</th><th>导师</th><th class="c">状态</th></tr></thead>
-    <tbody>${uncoveredRows || '<tr><td colspan="3" class="c">全部覆盖</td></tr>'}</tbody>
+    <thead><tr><th>学生</th>${typeCols.map((t) => `<th class="c">${t}</th>`).join('')}<th class="c">其他</th><th>最近成绩</th><th>本周摘要</th></tr></thead>
+    <tbody>${regRows}</tbody>
   </table>
 
-  <h2>本周记录（${weekRecords.length} 条）</h2>
+  <h2>下周重点（${nextWeek.length} 件）</h2>
+  <table>
+    <thead><tr><th class="c" style="width:22mm">截止</th><th>事项</th></tr></thead>
+    <tbody>${nextRows || '<tr><td colspan="2" class="c">下周还没有安排</td></tr>'}</tbody>
+  </table>
+
+  <h2>本周记录明细（${weekRecords.length} 条）</h2>
   <table>
     <thead><tr><th class="c" style="width:18mm">日期</th><th style="width:20mm">姓名</th><th class="c" style="width:16mm">类型</th><th>内容</th></tr></thead>
     <tbody>${recordRows || '<tr><td colspan="4" class="c">本周暂无记录</td></tr>'}</tbody>
@@ -77,7 +117,11 @@ export function buildWeeklyHtml(data: AppData, refDate: string, teacherLine = ''
 
 /** 触发下载（浏览器）；返回文件名 */
 export function downloadFile(content: string, fileName: string, mime: string): string {
-  const blob = new Blob([content], { type: mime });
+  return downloadBlob(new Blob([content], { type: mime }), fileName);
+}
+
+/** Blob 版下载（xlsx 等二进制用） */
+export function downloadBlob(blob: Blob, fileName: string): string {
   const url = URL.createObjectURL(blob);
   const a = window.document.createElement('a');
   a.href = url;
