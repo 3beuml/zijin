@@ -1,6 +1,6 @@
 /** 学生详情：成绩（名次必带池标签）+ 浮动（同池才可比）+ 记录时间线 + 记一笔（含跟进待办） */
 import { useState } from 'react';
-import type { AppData, Exam, Todo } from '../../domain/types.ts';
+import type { AppData, Exam, RecordItem, Todo } from '../../domain/types.ts';
 import { TOTAL_SUBJECT } from '../../domain/types.ts';
 import { rankText } from '../../domain/pool.ts';
 import { findScore, rankDelta, totalFor } from '../../domain/score.ts';
@@ -8,6 +8,7 @@ import { recordsOf } from '../../domain/weekly.ts';
 import { openTodosOf, toggleTodo } from '../../domain/todo.ts';
 import { fmtDelta, fmtScore } from '../../domain/format.ts';
 import { nowIso, todayStr } from '../util.ts';
+import { RecordEditSheet } from '../components/RecordEditSheet.tsx';
 
 const RECORD_TYPES = ['沟通', '谈心', '家访', '约谈', '其他'];
 
@@ -34,10 +35,20 @@ export function StudentDetail({
   const exams = [...data.exams].sort((a, b) => a.order - b.order);
   const timeline = recordsOf(data.records, studentId);
   const followUps = openTodosOf(data.todos, studentId);
+  const [editingRecord, setEditingRecord] = useState<RecordItem | null>(null);
 
   const toggleFollowUp = async (t: Todo) => {
     const todos = data.todos.map((x) => (x.id === t.id ? toggleTodo(x, nowIso()) : x));
     await onUpdate({ ...data, todos });
+  };
+
+  const saveRecord = async (next: RecordItem) => {
+    await onUpdate({ ...data, records: data.records.map((r) => (r.id === next.id ? next : r)) });
+    setEditingRecord(null);
+  };
+  const deleteRecord = async (rec: RecordItem) => {
+    await onUpdate({ ...data, records: data.records.filter((r) => r.id !== rec.id) });
+    setEditingRecord(null);
   };
 
   return (
@@ -86,7 +97,17 @@ export function StudentDetail({
       <RecordSection
         records={timeline}
         onAdd={(rec, followUp) => onAddRecord(studentId, rec, followUp)}
+        onEditRecord={setEditingRecord}
       />
+
+      {editingRecord && (
+        <RecordEditSheet
+          record={editingRecord}
+          onCancel={() => setEditingRecord(null)}
+          onSave={saveRecord}
+          onDelete={deleteRecord}
+        />
+      )}
     </div>
   );
 }
@@ -152,12 +173,14 @@ function ExamBlock({
 function RecordSection({
   records,
   onAdd,
+  onEditRecord,
 }: {
   records: AppData['records'];
   onAdd: (
     rec: { date: string; type: string; content: string },
     followUp?: { title: string; due: string },
   ) => Promise<void>;
+  onEditRecord: (rec: RecordItem) => void;
 }) {
   const [type, setType] = useState(RECORD_TYPES[0]);
   const [date, setDate] = useState(todayStr());
@@ -220,6 +243,9 @@ function RecordSection({
               <span className="tl-date">{r.date}</span>
               <span className="tag">{r.type}</span>
               <span className="tl-content">{r.content}</span>
+              <button className="link-btn" onClick={() => onEditRecord(r)}>
+                改
+              </button>
             </li>
           ))}
         </ul>

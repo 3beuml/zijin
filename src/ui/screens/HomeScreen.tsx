@@ -8,7 +8,7 @@ import type { AppData, Todo } from '../../domain/types.ts';
 import { todoViews, toggleTodo, todosDueBetween } from '../../domain/todo.ts';
 import { myStudents } from '../../domain/students.ts';
 import { weeklySummary } from '../../domain/weekly.ts';
-import { newId, nowIso, shiftDate, todayStr } from '../util.ts';
+import { newId, nowIso, shortDate, shiftDate, todayStr } from '../util.ts';
 
 const QUICK_TYPES = ['沟通', '谈心', '家访', '其他'];
 
@@ -18,12 +18,14 @@ export function HomeScreen({
   onOpenStudent,
   onGoStudents,
   onGoTodos,
+  onGoWeekly,
 }: {
   data: AppData;
   onUpdate: (next: AppData) => Promise<void>;
   onOpenStudent: (id: string) => void;
   onGoStudents: () => void;
   onGoTodos: () => void;
+  onGoWeekly: () => void;
 }) {
   const today = todayStr();
   const [quickType, setQuickType] = useState<string | null>(null);
@@ -59,6 +61,15 @@ export function HomeScreen({
     <div className="page">
       <h1 className="page-title">今日</h1>
       <div className="summary-line">{dateLabel}</div>
+
+      {/* 周手册入口（design-ui：周手册放今日页顶部入口） */}
+      <section className="card weekly-entry" onClick={onGoWeekly} role="button" aria-label="打开周手册">
+        <span className="row-main">
+          <span className="row-name">周手册 · {shortDate(week.start)} – {shortDate(week.end)}</span>
+          <span className="row-sub">已沟通 {week.covered}/{scopeStudents.length} · 点开登记表与导出</span>
+        </span>
+        <span className="row-side">›</span>
+      </section>
 
       {(views.overdue.length > 0 || views.today.length > 0) && (
         <section className="card">

@@ -8,17 +8,19 @@ import { emptyData, loadData, saveData, clearData } from '../storage/db.ts';
 import { HomeScreen } from './screens/HomeScreen';
 import { StudentsScreen } from './screens/StudentsScreen';
 import { StudentDetail } from './screens/StudentDetail';
+import { RecordsScreen } from './screens/RecordsScreen';
 import { WeeklyScreen } from './screens/WeeklyScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { TodosScreen } from './screens/TodosScreen';
 
-type Tab = 'home' | 'students' | 'todos' | 'weekly' | 'mine';
+type Tab = 'home' | 'students' | 'records' | 'todos' | 'mine';
 
 export default function App() {
   const [data, setData] = useState<AppData | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [tab, setTab] = useState<Tab>('home');
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [weeklyOpen, setWeeklyOpen] = useState(false);
 
   useEffect(() => {
     loadData().then((d) => {
@@ -82,6 +84,7 @@ export default function App() {
             onOpenStudent={setDetailId}
             onGoStudents={() => setTab('students')}
             onGoTodos={() => setTab('todos')}
+            onGoWeekly={() => setWeeklyOpen(true)}
           />
         )}
         {tab === 'students' &&
@@ -96,12 +99,23 @@ export default function App() {
           ) : (
             <StudentsScreen data={data} onOpenStudent={setDetailId} />
           ))}
+        {tab === 'records' && <RecordsScreen data={data} onUpdate={persist} onOpenStudent={setDetailId} />}
         {tab === 'todos' && <TodosScreen data={data} onUpdate={persist} />}
-        {tab === 'weekly' && <WeeklyScreen data={data} onOpenStudent={setDetailId} />}
-        {tab === 'mine' && <SettingsScreen data={data} onImported={persist} onWipe={wipeAll} />}
+        {tab === 'mine' && (
+          <SettingsScreen
+            data={data}
+            onImported={persist}
+            onWipe={wipeAll}
+            onGoWeekly={() => setWeeklyOpen(true)}
+          />
+        )}
       </main>
 
-      {detailId == null && (
+      {weeklyOpen && (
+        <WeeklyScreen data={data} onOpenStudent={setDetailId} onBack={() => setWeeklyOpen(false)} />
+      )}
+
+      {detailId == null && !weeklyOpen && (
         <nav className="tabbar">
           <button className={`tabbar-item${tab === 'home' ? ' active' : ''}`} onClick={() => setTab('home')}>
             今日
@@ -109,11 +123,11 @@ export default function App() {
           <button className={`tabbar-item${tab === 'students' ? ' active' : ''}`} onClick={() => setTab('students')}>
             学生
           </button>
+          <button className={`tabbar-item${tab === 'records' ? ' active' : ''}`} onClick={() => setTab('records')}>
+            记录
+          </button>
           <button className={`tabbar-item${tab === 'todos' ? ' active' : ''}`} onClick={() => setTab('todos')}>
             待办
-          </button>
-          <button className={`tabbar-item${tab === 'weekly' ? ' active' : ''}`} onClick={() => setTab('weekly')}>
-            周手册
           </button>
           <button className={`tabbar-item${tab === 'mine' ? ' active' : ''}`} onClick={() => setTab('mine')}>
             我的

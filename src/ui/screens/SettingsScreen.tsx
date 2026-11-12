@@ -45,10 +45,12 @@ export function SettingsScreen({
   data,
   onImported,
   onWipe,
+  onGoWeekly,
 }: {
   data: AppData;
   onImported: (next: AppData) => Promise<void>;
   onWipe: () => Promise<void>;
+  onGoWeekly: () => void;
 }) {
   const [pending, setPending] = useState<PendingImport | null>(null);
   const [report, setReport] = useState<string[] | null>(null);
@@ -136,6 +138,11 @@ export function SettingsScreen({
         <ImportConfirm pending={pending} onCancel={() => setPending(null)} onConfirm={doImport} />
       ) : (
         <>
+          <section className="card" onClick={onGoWeekly} role="button" aria-label="打开周手册">
+            <h2 className="card-title">周工作手册</h2>
+            <p className="muted">登记表 · 下周重点 · 导出 Excel / A4 / 打印（周五交材料用）</p>
+          </section>
+
           {advisors.length > 0 && (
             <section className="card">
               <h2 className="card-title">分包</h2>

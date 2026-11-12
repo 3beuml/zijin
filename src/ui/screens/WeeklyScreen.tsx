@@ -18,9 +18,11 @@ const TYPE_COLS = ['沟通', '谈心', '家访'];
 export function WeeklyScreen({
   data,
   onOpenStudent,
+  onBack,
 }: {
   data: AppData;
   onOpenStudent: (id: string) => void;
+  onBack?: () => void;
 }) {
   const [refDate, setRefDate] = useState(todayStr());
   const mine = useMemo(
@@ -61,6 +63,11 @@ export function WeeklyScreen({
 
   return (
     <div className="page">
+      {onBack && (
+        <button className="back no-print" onClick={onBack}>
+          ‹ 返回
+        </button>
+      )}
       <div className="print-only print-head">
         周手册（{shortDate(reg.start)} – {shortDate(reg.end)}）· {advisorLabel} · 已沟通 {week.covered}
       </div>
