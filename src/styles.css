@@ -944,6 +944,15 @@ li:last-child > .row {
   overflow-y: auto;
 }
 
+/* 周手册 / 成绩分析等非 tabbar 全屏页 */
+.screen-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--paper);
+  z-index: 25;
+  overflow-y: auto;
+}
+
 .search-bar {
   display: flex;
   gap: var(--space-2);

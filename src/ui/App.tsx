@@ -121,11 +121,15 @@ export default function App() {
       </main>
 
       {weeklyOpen && (
-        <WeeklyScreen data={data} onOpenStudent={setDetailId} onBack={() => setWeeklyOpen(false)} />
+        <div className="screen-overlay">
+          <WeeklyScreen data={data} onOpenStudent={setDetailId} onBack={() => setWeeklyOpen(false)} />
+        </div>
       )}
 
       {examsOpen && (
-        <ExamsScreen data={data} onOpenStudent={setDetailId} onBack={() => setExamsOpen(false)} />
+        <div className="screen-overlay">
+          <ExamsScreen data={data} onOpenStudent={setDetailId} onBack={() => setExamsOpen(false)} />
+        </div>
       )}
 
       {searchOpen && (
