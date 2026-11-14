@@ -472,3 +472,15 @@ node scripts/accept.mjs dump.json
 - 验证：aapt 验签 1.0.0/versionCode 6；apksigner v1+v2 通过；uses-permission 仅剩系统自动生成的
   自定义权限（无 INTERNET）；恢复流程真机全程实测。
 - 交付：子衿-v1.0.0-release.apk（3.5MB，正式签名，发给老师的就是它）。
+
+## 阶段 23 完成（v1.0.1 · 启动器图标渲染修复）
+- 背景：用户桌面图标显示为系统默认机器人兜底图——Flyme 启动器对**矢量前景的自适应图标**
+  运行时渲染失败（aapt2 编译通过、APK 内资源齐全，但 ROM 启动器不支持该形态）。
+- 修复：弃用矢量前景，改用 **PNG 位图图层**——写了一个零依赖的 PNG 生成器
+  （node zlib 手写 PNG 编码 + 像素级圆角矩形/圆形绘制 + 盒式降采样），生成
+  全密度 ic_launcher_foreground.png（108~432px）与 legacy ic_launcher(.round).png（48~192px），
+  anydpi-v26 前景引用回 @mipmap。靛青底 + 白色本子图记，桌面实测清晰可辨。
+- 升级链路真机验证：同签名 versionCode 6→7 覆盖安装（adb install -r），**无需卸载、数据保留**、
+  图标立即刷新——分发后的升级方式即此流程。
+- 版本：versionName 1.0.1 / versionCode 7。交付 子衿-v1.0.1-release.apk（发给老师的文件）。
+- 教训：自适应图标的前景层在 ROM 启动器上兼容性不可控，**用 PNG 不用矢量**。
