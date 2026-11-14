@@ -453,3 +453,22 @@ node scripts/accept.mjs dump.json
   后剔除 33 名虚构样例学生及其分数、考试「本次」改称「期中」、当日快照重拍为干净数据、
   WebView 重载生效；复检 33 人 / 330 行 / 0 重复 / 0 总分不符；PC 端临时备份（含真实名单）已删除。
   键盘弹出行为真机验证通过（搜索框不被键盘遮挡）。「上次」考试改名与分包设置留待用户操作。
+
+## 阶段 22 完成（v1.0.0 · 正式签名分发版 + 升级链路）
+- 背景：用户要把软件发给老师用，问「直接发 APK 行不行 / 还有没有问题 / 以后能不能升级（现在还是 debug 包）」。
+- 实际做了什么：
+  - **正式签名**：keytool 生成 zijin-release.keystore（RSA 2048，有效期 30 年，gitignore 不进仓库），
+    密码存 android/local.properties（gitignored）；build.gradle 加 signingConfigs.release。
+    **升级的前提是签名一致 + versionCode 递增——keystore 丢失将无法覆盖升级，必须备份。**
+  - **隐私加固**：移除模板默认的 INTERNET 权限（应用零权限、真不联网）；allowBackup=false
+    （学生数据不进任何云备份）；关闭 release 的 WebView 远程调试（Capacitor release 默认行为）。
+  - **正式图标**：自适应图标（靛青底 #2C4A63 + 白色本子笔矢量前景），Android 8+ 生效；
+    更旧设备回退模板默认图标。
+  - 版本 versionName 1.0.0 / versionCode 6（分发起点）。
+  - **真机数据迁移**：debug→release 签名不同必须卸载重装。用 CDP 导出手机数据（33 人）→
+    卸载 debug → 装 release → 走**应用自己的「恢复备份」流程**（文件选择器实测全程可用）注入数据。
+    恢复成功提示「已恢复：33 名学生」；分包卡出现（导师数据在）。
+  - 已知小瑕疵：恢复后当日快照仍是恢复前拍的空快照（次日自动重拍），无实际影响。
+- 验证：aapt 验签 1.0.0/versionCode 6；apksigner v1+v2 通过；uses-permission 仅剩系统自动生成的
+  自定义权限（无 INTERNET）；恢复流程真机全程实测。
+- 交付：子衿-v1.0.0-release.apk（3.5MB，正式签名，发给老师的就是它）。

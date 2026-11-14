@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 子衿图标前景：白色本子 + 笔（对应应用内空态插画）。自适应图标安全区：中央 66dp 内 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 本子（圆角矩形 + 三行线） -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M38,40 h28 a2,2 0 0 1 2,2 v26 a2,2 0 0 1 -2,2 h-28 a2,2 0 0 1 -2,-2 v-26 a2,2 0 0 1 2,-2 z" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M42,49 h20 M42,55 h20 M42,61 h12" />
+    <!-- 笔（斜置） -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M58,68 l13,-13 4,4 -13,13 -6,1.5 z" />
+</vector>
