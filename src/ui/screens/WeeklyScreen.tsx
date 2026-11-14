@@ -31,8 +31,12 @@ export function WeeklyScreen({
   );
   const scopeStudents = mine.length > 0 ? mine : data.students;
   const reg = useMemo(
-    () => weeklyRegister(scopeStudents, data.records, data.scores, data.exams, refDate),
-    [scopeStudents, data.records, data.scores, data.exams, refDate],
+    () =>
+      weeklyRegister(scopeStudents, data.records, data.scores, data.exams, refDate, {
+        attendance: data.attendance,
+        homework: data.homework,
+      }),
+    [scopeStudents, data.records, data.scores, data.exams, refDate, data.attendance, data.homework],
   );
   const week = useMemo(
     () => weeklySummary(scopeStudents, data.records, refDate),
@@ -117,6 +121,8 @@ export function WeeklyScreen({
                 </th>
               ))}
               <th className="c">其他</th>
+              <th>考勤</th>
+              <th className="c">作业</th>
               <th>最近成绩</th>
               <th>本周摘要</th>
             </tr>
@@ -138,6 +144,10 @@ export function WeeklyScreen({
                   {[...r.countByType.entries()]
                     .filter(([t]) => !TYPE_COLS.includes(t))
                     .reduce((n, [, c]) => n + c, 0) || '—'}
+                </td>
+                <td className="att-cell">{r.attendanceLabel || '—'}</td>
+                <td className={`num c${(r.homeworkMissed ?? 0) > 0 ? ' hw-miss-num' : ''}`}>
+                  {r.homeworkMissed == null ? '—' : r.homeworkMissed}
                 </td>
                 <td className="num">
                   {r.total == null

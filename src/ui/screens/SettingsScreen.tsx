@@ -1,13 +1,16 @@
 /**
  * 我的：分包设置、周手册/成绩分析/全部记录入口、备份恢复、每日快照、清空。
  * 导入走 App 级触发（dock 中键与这里共用同一条流程）。
+ * v0.6 加「作业登记」历史：每条可改（重开登记弹层）可删。
  */
 import { useEffect, useRef, useState } from 'react';
-import type { AppData } from '../../domain/types.ts';
+import type { AppData, Homework } from '../../domain/types.ts';
 import { distinctAdvisors } from '../../domain/students.ts';
+import { missingStudentsOf } from '../../domain/homework.ts';
 import { downloadFile } from '../print.ts';
 import { todayStr } from '../util.ts';
 import { normalizeData, listSnapshots, type Snapshot } from '../../storage/db.ts';
+import { HomeworkSheet } from '../components/HomeworkSheet.tsx';
 
 export function SettingsScreen({
   data,
@@ -30,7 +33,10 @@ export function SettingsScreen({
   const restoreRef = useRef<HTMLInputElement>(null);
   const [wipeArmed, setWipeArmed] = useState(false);
   const [snaps, setSnaps] = useState<Snapshot[]>([]);
+  const [hwEditing, setHwEditing] = useState<Homework | 'new' | null>(null);
   const advisors = distinctAdvisors(data.students);
+  const nameOf = (id: string) => data.students.find((s) => s.id === id)?.name ?? '?';
+  const homeworks = [...data.homework].sort((a, b) => b.date.localeCompare(a.date));
 
   useEffect(() => {
     listSnapshots()
@@ -103,6 +109,39 @@ export function SettingsScreen({
         <p className="muted">
           {data.records.length} 条沟通/谈心/家访记录的统一时间线，可查可改（换名字、约错了时间都在这改）
         </p>
+      </section>
+
+      <section className="card">
+        <div className="card-title-row">
+          <h2 className="card-title">作业登记</h2>
+          {homeworks.length > 0 && <span className="tag">{homeworks.length} 次</span>}
+        </div>
+        {homeworks.length === 0 ? (
+          <p className="muted">
+            按次登记全班作业：名单平铺、点一下切换「交 / 未交 / 迟交 / 补交 / 免交」，
+            未交次数会汇总到学生详情和周手册。
+          </p>
+        ) : (
+          <ul className="plain-list">
+            {homeworks.slice(0, 10).map((h) => (
+              <li key={h.id} className="hw-history-row">
+                <span>
+                  {h.date}
+                  {h.subject ? ` · ${h.subject}` : ''} · 未交 {missingStudentsOf(h).length} 人
+                  {missingStudentsOf(h).length > 0
+                    ? `（${missingStudentsOf(h).slice(0, 4).map(nameOf).join('、')}${missingStudentsOf(h).length > 4 ? '…' : ''}）`
+                    : ''}
+                </span>
+                <button className="link-btn" onClick={() => setHwEditing(h)}>
+                  改
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <button className="btn" onClick={() => setHwEditing('new')}>
+          新登记一次作业
+        </button>
       </section>
 
       <section className="card">
@@ -200,6 +239,28 @@ export function SettingsScreen({
           {wipeArmed ? '再点一次确认清空' : '清空全部数据…'}
         </button>
       </section>
+
+      {hwEditing && (
+        <HomeworkSheet
+          data={data}
+          initial={hwEditing === 'new' ? null : hwEditing}
+          onClose={() => setHwEditing(null)}
+          onSave={async (hw) => {
+            const exists = hwEditing !== 'new' && data.homework.some((h) => h.id === hw.id);
+            await onImported({
+              ...data,
+              homework: exists
+                ? data.homework.map((h) => (h.id === hw.id ? hw : h))
+                : [...data.homework, hw],
+            });
+            setHwEditing(null);
+          }}
+          onDelete={async (hw) => {
+            await onImported({ ...data, homework: data.homework.filter((h) => h.id !== hw.id) });
+            setHwEditing(null);
+          }}
+        />
+      )}
     </div>
   );
 }

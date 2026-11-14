@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { distinctAdvisors, filterStudents, myStudents } from './students';
+import { distinctAdvisors, filterStudents, myStudents, sortByRecentRecord } from './students';
 import type { Student } from './types';
 
 function s(id: string, advisor: string): Student {
@@ -37,5 +37,45 @@ describe('filterStudents', () => {
   it('组合条件', () => {
     const r = filterStudents(students, { scope: 'all', advisor: '', keyword: '', onlyUncovered: false, contactedThisWeek: contacted });
     expect(r).toHaveLength(4);
+  });
+});
+
+describe('students · v0.6 筛选与排序（teacher §5.2）', () => {
+  const base = [
+    { id: 's1', name: '张三', classId: 'c1', advisor: '王', gender: '男' as const, dorm: '1号楼', tags: ['临界生'] },
+    { id: 's2', name: '李四', classId: 'c1', advisor: '王', gender: '女' as const, dorm: '2号楼', tags: [] },
+    { id: 's3', name: '王五', classId: 'c1', advisor: '李', gender: '男' as const, tags: ['临界生', '手机管控'] },
+  ];
+  const opts = {
+    scope: 'all' as const,
+    advisor: '',
+    keyword: '',
+    onlyUncovered: false,
+    contactedThisWeek: new Set<string>(),
+  };
+
+  it('按性别筛选', () => {
+    expect(filterStudents(base, { ...opts, gender: '女' }).map((s) => s.id)).toEqual(['s2']);
+    expect(filterStudents(base, { ...opts, gender: '男' })).toHaveLength(2);
+    expect(filterStudents(base, opts)).toHaveLength(3); // 空串 = 不限
+  });
+
+  it('按宿舍筛选', () => {
+    expect(filterStudents(base, { ...opts, dorm: '1号楼' }).map((s) => s.id)).toEqual(['s1']);
+  });
+
+  it('按标签筛选', () => {
+    expect(filterStudents(base, { ...opts, tag: '临界生' }).map((s) => s.id)).toEqual(['s1', 's3']);
+    expect(filterStudents(base, { ...opts, tag: '手机管控' }).map((s) => s.id)).toEqual(['s3']);
+  });
+
+  it('sortByRecentRecord：最近有记录的在前，没记录的在后保持原序', () => {
+    const records = [
+      { studentId: 's3', date: '2026-11-10', createdAt: '2026-11-10T08:00:00Z' },
+      { studentId: 's1', date: '2026-11-11', createdAt: '2026-11-11T08:00:00Z' },
+      { studentId: 's1', date: '2026-11-09' },
+    ];
+    const sorted = sortByRecentRecord(base, records);
+    expect(sorted.map((s) => s.id)).toEqual(['s1', 's3', 's2']); // s1 的最新记录 11-11 晚于 s3 的 11-10
   });
 });

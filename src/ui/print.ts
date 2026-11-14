@@ -18,7 +18,10 @@ function esc(s: string): string {
 export function buildWeeklyHtml(data: AppData, refDate: string, teacherLine = ''): string {
   const mine = myStudents(data.students, data.settings.advisor);
   const scopeStudents = mine.length > 0 ? mine : data.students;
-  const reg = weeklyRegister(scopeStudents, data.records, data.scores, data.exams, refDate);
+  const reg = weeklyRegister(scopeStudents, data.records, data.scores, data.exams, refDate, {
+    attendance: data.attendance,
+    homework: data.homework,
+  });
   const week = weeklySummary(scopeStudents, data.records, refDate);
   const weekRecords = data.records
     .filter((r) => r.date >= reg.start && r.date <= reg.end)
@@ -44,6 +47,8 @@ export function buildWeeklyHtml(data: AppData, refDate: string, teacherLine = ''
         <td>${esc(row.student.name)}</td>
         ${typeCols.map((t) => `<td class="c">${count(t)}</td>`).join('')}
         <td class="c">${count('其他')}</td>
+        <td class="c">${esc(row.attendanceLabel || '—')}</td>
+        <td class="c">${row.homeworkMissed == null ? '—' : String(row.homeworkMissed)}</td>
         <td>${esc(last)}</td>
         <td>${esc(row.summary || '本周无记录')}</td>
       </tr>`;
@@ -94,7 +99,7 @@ export function buildWeeklyHtml(data: AppData, refDate: string, teacherLine = ''
 
   <h2>登记表（每人一行）</h2>
   <table>
-    <thead><tr><th>学生</th>${typeCols.map((t) => `<th class="c">${t}</th>`).join('')}<th class="c">其他</th><th>最近成绩</th><th>本周摘要</th></tr></thead>
+    <thead><tr><th>学生</th>${typeCols.map((t) => `<th class="c">${t}</th>`).join('')}<th class="c">其他</th><th class="c">考勤</th><th class="c">作业</th><th>最近成绩</th><th>本周摘要</th></tr></thead>
     <tbody>${regRows}</tbody>
   </table>
 

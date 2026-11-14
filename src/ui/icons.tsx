@@ -140,6 +140,26 @@ export function IconClose(props: IconProps) {
   );
 }
 
+/** 考勤：时钟（v0.6） */
+export function IconClock(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2.5" />
+    </Svg>
+  );
+}
+
+/** 作业：本子+笔（v0.6） */
+export function IconHomework(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="4.5" y="4" width="15" height="16" rx="2" />
+      <path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4" />
+    </Svg>
+  );
+}
+
 /** 搜索：放大镜 */
 export function IconSearch(props: IconProps) {
   return (

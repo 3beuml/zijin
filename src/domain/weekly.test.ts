@@ -126,3 +126,28 @@ describe('weeklyRegister', () => {
     expect(s2.total).toBe(70); // 只有语文一门
   });
 });
+
+describe('weekly · 考勤/作业列（v0.6，teacher §5.7）', () => {
+  it('extras 给考勤/作业时，登记表行带本周标签；不传则两列为空（旧调用兼容）', () => {
+    const students = [{ id: 's1', name: '张三', classId: 'c1', advisor: '' }];
+    const records: never[] = [];
+    const attendance = [
+      { id: 'a1', studentId: 's1', date: '2026-11-09', type: '迟到', createdAt: '' },
+      { id: 'a2', studentId: 's1', date: '2026-11-10', type: '迟到', createdAt: '' },
+      { id: 'a3', studentId: 's1', date: '2026-11-02', type: '旷课', createdAt: '' }, // 上周
+    ] as never[];
+    const homework = [
+      { id: 'h1', date: '2026-11-09', records: [{ studentId: 's1', status: '未交' }], createdAt: '' },
+      { id: 'h2', date: '2026-11-10', records: [{ studentId: 's1', status: '未交' }], createdAt: '' },
+      { id: 'h3', date: '2026-11-10', records: [{ studentId: 's1', status: '交' }], createdAt: '' },
+      { id: 'h4', date: '2026-11-01', records: [{ studentId: 's1', status: '未交' }], createdAt: '' }, // 上周
+    ] as never[];
+    // 2026-11-13 周五 → 本周 11-09 ~ 11-15
+    const reg = weeklyRegister(students, records, [], [], '2026-11-13', { attendance, homework });
+    expect(reg.rows[0].attendanceLabel).toBe('迟到2');
+    expect(reg.rows[0].homeworkMissed).toBe(2);
+    const noExtras = weeklyRegister(students, records, [], [], '2026-11-13');
+    expect(noExtras.rows[0].attendanceLabel).toBe('');
+    expect(noExtras.rows[0].homeworkMissed).toBeNull();
+  });
+});

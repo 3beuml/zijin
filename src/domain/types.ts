@@ -65,6 +65,42 @@ export interface RecordItem {
   createdAt: string; // ISO 时间戳，用于排序
 }
 
+/**
+ * 考勤（v0.6，teacher §5.3.6 的班主任刚需子集）。
+ * 迟到/早退/病假/事假/旷课/离校；时段与原因可选。
+ */
+export type AttendanceType = '迟到' | '早退' | '病假' | '事假' | '旷课' | '离校';
+
+export interface Attendance {
+  id: string;
+  studentId: string;
+  date: string; // 'YYYY-MM-DD'
+  slot?: string; // 时段：早读 / 第N节 / 晚自习 / 就寝（可选）
+  type: AttendanceType;
+  reason?: string;
+  createdAt: string;
+}
+
+/**
+ * 作业登记（v0.6，teacher §5.3.3）：一次作业 × 每个学生一条状态。
+ * 名单平铺默认「交」，点一下切换；「未交」连续出现会触发提醒。
+ */
+export type HomeworkStatus = '交' | '迟交' | '未交' | '补交' | '免交';
+
+export interface HomeworkRecord {
+  studentId: string;
+  status: HomeworkStatus;
+}
+
+export interface Homework {
+  id: string;
+  date: string; // 'YYYY-MM-DD'
+  subject?: string; // 科目（可选）
+  content?: string; // 作业内容（可选）
+  records: HomeworkRecord[]; // 登记过的学生一条一条
+  createdAt: string;
+}
+
 /** 待办（v0.2，参考 teacher 的 Todo；逾期置顶、完成后可撤销） */
 export interface Todo {
   id: string;
@@ -85,7 +121,7 @@ export interface Settings {
   advisor: string;
 }
 
-/** 全库形状（存储层 / 导出契约共用） */
+/** 全库形状（存储层 / 导出契约共用）。v0.6 加 attendance / homework（旧备份 normalizeData 补齐） */
 export interface AppData {
   version: 1;
   students: Student[];
@@ -93,6 +129,8 @@ export interface AppData {
   scores: Score[];
   records: RecordItem[];
   todos: Todo[];
+  attendance: Attendance[];
+  homework: Homework[];
   settings: Settings;
 }
 

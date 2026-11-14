@@ -26,8 +26,10 @@ import { QuickRecordSheet } from './components/QuickRecordSheet.tsx';
 import { TodoForm } from './components/TodoForm.tsx';
 import { ImportConfirmSheet, type PendingImport } from './components/ImportConfirmSheet.tsx';
 import { ImportResultSheet } from './components/ImportResultSheet.tsx';
+import { AttendanceSheet } from './components/AttendanceSheet.tsx';
+import { HomeworkSheet } from './components/HomeworkSheet.tsx';
 import { myStudents } from '../domain/students.ts';
-import { IconToday, IconStudents, IconPlus, IconTodos, IconMine, IconClose, IconImport, IconTalk, IconHeart, IconHomeVisit, IconMore } from './icons.tsx';
+import { IconToday, IconStudents, IconPlus, IconTodos, IconMine, IconClose, IconImport, IconTalk, IconHeart, IconHomeVisit, IconMore, IconClock, IconHomework } from './icons.tsx';
 
 type Tab = 'home' | 'students' | 'todos' | 'mine';
 
@@ -52,6 +54,8 @@ export default function App() {
   const [plusTodoOpen, setPlusTodoOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [quickType, setQuickType] = useState<string | undefined>(undefined);
+  const [attOpen, setAttOpen] = useState(false);
+  const [hwOpen, setHwOpen] = useState(false);
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
   const [importResult, setImportResult] = useState<{ fileName: string; report: Awaited<ReturnType<typeof commit>>['report'] } | null>(null);
   const [sheetPick, setSheetPick] = useState<{ fileName: string; sheets: SheetTable[] } | null>(null);
@@ -306,6 +310,20 @@ export default function App() {
                 </span>
                 <span className="row-side">›</span>
               </button>
+              <button className="row compact" onClick={() => { setPlusOpen(false); setAttOpen(true); }}>
+                <span className="row-main">
+                  <span className="row-name row-with-icon"><IconClock size={18} /> 记考勤</span>
+                  <span className="row-sub">迟到 / 请假 / 旷课，可连着记</span>
+                </span>
+                <span className="row-side">›</span>
+              </button>
+              <button className="row compact" onClick={() => { setPlusOpen(false); setHwOpen(true); }}>
+                <span className="row-main">
+                  <span className="row-name row-with-icon"><IconHomework size={18} /> 作业登记</span>
+                  <span className="row-sub">全班平铺点一下，谁没交一眼清</span>
+                </span>
+                <span className="row-side">›</span>
+              </button>
               <button className="row compact" onClick={openImportPicker}>
                 <span className="row-main">
                   <span className="row-name row-with-icon"><IconImport size={18} /> 导入成绩表</span>
@@ -329,8 +347,7 @@ export default function App() {
           }}
           onSave={async (studentId, rec) => {
             await addRecord(studentId, rec);
-            setQuickOpen(false);
-            setQuickType(undefined);
+            // 保存后弹层不关（QuickRecordSheet 自己显示「已记录」并可连记下一条）
           }}
           onOpenStudent={(id) => {
             setPlusOpen(false);
@@ -338,6 +355,25 @@ export default function App() {
             setQuickType(undefined);
             setTab('students');
             setDetailId(id);
+          }}
+        />
+      )}
+      {attOpen && (
+        <AttendanceSheet
+          data={data}
+          onClose={() => setAttOpen(false)}
+          onSave={async (att) => {
+            await persist({ ...data, attendance: [...data.attendance, att] });
+          }}
+        />
+      )}
+      {hwOpen && (
+        <HomeworkSheet
+          data={data}
+          onClose={() => setHwOpen(false)}
+          onSave={async (hw) => {
+            await persist({ ...data, homework: [...data.homework, hw] });
+            setHwOpen(false);
           }}
         />
       )}

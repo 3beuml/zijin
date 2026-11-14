@@ -210,7 +210,7 @@ export function HomeScreen({
               ...data,
               records: [...data.records, { ...rec, id, studentId, createdAt: nowIso() }],
             });
-            setQuickType(null);
+            // 保存后弹层不关（可连记下一条）
           }}
           onOpenStudent={(id) => {
             setQuickType(null);

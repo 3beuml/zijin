@@ -383,3 +383,24 @@ node scripts/accept.mjs dump.json
   与阶段 3 记录的 tabbar 伪象同类，应用本身无此问题；
   ③CSV 的 GBK 解码依赖 TextDecoder('gbk')（Chromium 支持），Node CLI 场景未覆盖（CLI 只吃 xlsx）；
   ④APK 未重打（按 AGENTS.md，本任务以闸门+分支交付，打包含在下一次交付段）。
+
+## 阶段 19 完成（v0.6 · teacher 需求缺口 P1+P2）
+- 背景：对照 teacher《需求分析与方案》逐条核对（对照表入库 docs/teacher-需求对照.md），
+  用户拍板 P1+P2 一起做——**含数据结构变更（用户已确认）**：AppData 新增 attendance / homework 两个数组。
+- 实际做了什么：
+  - P2 考勤：Attendance 实体（日期/时段/类型六选一/原因）+ domain/attendance.ts（时间线/类型计数/周标签）
+    + AttendanceSheet（记完不关可连记）+ 学生详情考勤卡（汇总 + 最近 5 条可删 + 记考勤入口）。
+  - P2 作业：Homework 实体（一次作业 × 每生状态 交/未交/迟交/补交/免交）+ domain/homework.ts
+    （未交/迟交计数、**连续未交 streak**、最近明细）+ HomeworkSheet（33 人平铺点按循环切换、只看未交、
+    编辑/删除模式）+ 学生详情作业卡（streak ≥3 标红）+ 我的作业历史卡。
+  - 周手册登记表加「考勤」「作业」两列（weeklyRegister 加 extras 参数，向后兼容），三出口同步。
+  - P1：逾期待办「顺延」（due=明天）；记一笔保存后不关弹层可连记 + 多选模式（家长会场景）；
+    学生列表性别筛选 + 按最近沟通排序 + 宿舍/标签筛选（字段已有，纯 filterStudents 扩展）；
+    学生详情总分趋势迷你折线（纯 SVG，≥3 次考试才显示）。
+  - normalizeData 逐项校验扩展到 attendance/homework（旧 v0.4/v0.5 备份恢复自动补齐）。
+- 闸门结果：`npx vitest run` → 135/135（新增 attendance/homework/筛选排序/周手册列 13 个测试）；
+  build 通过；浏览器 E2E：＋盘新入口、考勤连记流程落库、作业名单切换与保存、周手册考勤/作业列
+  （张伟"病假"、王芳/李娜红色未交 1）、详情考勤/作业卡（没交 1 次 · 2026-11-14 未交 数学）、
+  我的作业历史（改/删）、筛选行——全部核对通过。
+- 与原计划的偏差：宿舍/标签筛选在档案没填过时隐藏（避免空下拉）；作业"未交"口径不含迟交
+  （streak 里迟交延续、周手册列只数未交——口径写进 homework.ts 注释）；APK 0.6.0 重打并 adb 安装真机。

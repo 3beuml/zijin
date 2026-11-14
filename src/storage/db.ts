@@ -19,12 +19,18 @@ export function emptyData(): AppData {
     scores: [],
     records: [],
     todos: [],
+    attendance: [],
+    homework: [],
     settings: { advisor: '' },
   };
 }
 
+/** 考勤/作业的合法取值（db 层自持一份，不 import domain 业务逻辑） */
+const ATT_TYPES = ['迟到', '早退', '病假', '事假', '旷课', '离校'];
+const HW_STATUSES = ['交', '迟交', '未交', '补交', '免交'];
+
 /**
- * 旧备份 / 旧库兼容：补齐 v0.2 新增的 todos 与 settings。
+ * 旧备份 / 旧库兼容：补齐 v0.2 新增的 todos 与 settings、v0.6 新增的 attendance 与 homework。
  * v0.5 起逐项校验：备份文件可能是手工编辑过的，坏行（缺 id/姓名、缺池）直接丢弃，
  * 不让脏数据进库把界面搞崩。
  */
@@ -58,6 +64,24 @@ export function normalizeData(raw: Partial<AppData> | null): AppData {
     (t): t is AppData['todos'][number] =>
       !!t && typeof t === 'object' && typeof t.id === 'string' && typeof t.title === 'string',
   );
+  const attendance = (Array.isArray(raw.attendance) ? raw.attendance : []).filter(
+    (a): a is AppData['attendance'][number] =>
+      !!a && typeof a === 'object' && typeof a.id === 'string' &&
+      typeof a.studentId === 'string' && studentIds.has(a.studentId) &&
+      typeof a.date === 'string' && ATT_TYPES.includes(a.type),
+  );
+  const homework = (Array.isArray(raw.homework) ? raw.homework : []).filter(
+    (h): h is AppData['homework'][number] =>
+      !!h && typeof h === 'object' && typeof h.id === 'string' && typeof h.date === 'string' &&
+      Array.isArray(h.records),
+  ).map((h) => ({
+    ...h,
+    records: h.records.filter(
+      (r): r is AppData['homework'][number]['records'][number] =>
+        !!r && typeof r === 'object' && typeof r.studentId === 'string' &&
+        studentIds.has(r.studentId) && HW_STATUSES.includes(r.status),
+    ),
+  }));
   return {
     version: 1,
     students,
@@ -65,6 +89,8 @@ export function normalizeData(raw: Partial<AppData> | null): AppData {
     scores,
     records,
     todos,
+    attendance,
+    homework,
     settings: raw.settings && typeof raw.settings === 'object'
       ? { advisor: typeof raw.settings.advisor === 'string' ? raw.settings.advisor : '' }
       : base.settings,

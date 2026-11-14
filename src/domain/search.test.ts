@@ -5,6 +5,8 @@ import type { AppData } from './types';
 const data: AppData = {
   version: 1,
   settings: { advisor: '' },
+  attendance: [],
+  homework: [],
   students: [
     { id: 's1', name: '张伟', classId: '10', advisor: '王子柔', tags: ['临界生'], dorm: '5号楼201', note: '数学有潜力' },
     { id: 's2', name: '王芳', classId: '10', advisor: '李迎莉' },

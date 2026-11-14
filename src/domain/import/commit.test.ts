@@ -21,6 +21,8 @@ const empty: AppData = {
   scores: [],
   records: [],
   todos: [],
+  attendance: [],
+  homework: [],
   settings: { advisor: '' },
 };
 
@@ -261,6 +263,8 @@ describe('commit · 重导刷新语义（v0.5）', () => {
       ],
       records: [],
       todos: [],
+      attendance: [],
+      homework: [],
       settings: { advisor: '' },
     };
     const table: Cell[][] = [

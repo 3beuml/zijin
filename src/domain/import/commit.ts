@@ -445,6 +445,8 @@ export function commit(
     scores,
     records: existing.records.map((r) => ({ ...r })),
     todos: existing.todos.map((t) => ({ ...t })),
+    attendance: existing.attendance.map((a) => ({ ...a })),
+    homework: existing.homework.map((h) => ({ ...h })),
     settings: { ...existing.settings },
   };
 

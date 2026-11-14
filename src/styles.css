@@ -1425,3 +1425,150 @@ textarea {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ---- v0.6 · 学生列表筛选行 ---- */
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.filter-select {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--ink-600);
+  font: inherit;
+  font-size: var(--text-xs);
+  padding: 0 var(--space-2);
+  flex-shrink: 0;
+}
+
+/* ---- v0.6 · 保存后连记提示 ---- */
+.saved-flash {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: #e7f2ec;
+  color: var(--success);
+  border-radius: var(--radius-control);
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+/* ---- v0.6 · 多选模式 ---- */
+.list.multi .row.picked {
+  background: var(--indigo-100);
+}
+
+.row-name svg {
+  margin-right: 4px;
+  vertical-align: -2px;
+}
+
+/* ---- v0.6 · 作业登记名单 ---- */
+.hw-list {
+  max-height: 46vh;
+  overflow-y: auto;
+}
+
+.hw-row {
+  justify-content: flex-start;
+  gap: var(--space-2);
+}
+
+.hw-status {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  flex-shrink: 0;
+  width: 40px;
+  text-align: center;
+}
+
+.hw-status.hw-ok {
+  color: var(--ink-400);
+}
+
+.hw-status.hw-miss {
+  color: var(--danger);
+}
+
+.hw-status.hw-warn {
+  color: var(--warning);
+}
+
+.hw-status.hw-free {
+  color: var(--ink-400);
+}
+
+/* ---- v0.6 · 考勤卡 ---- */
+.att-summary {
+  color: var(--ink-600);
+  font-size: var(--text-sm);
+  margin: 0 0 var(--space-2);
+}
+
+.att-tag.att-bad {
+  background: #f6e4e2;
+  color: var(--danger);
+}
+
+.att-tag.att-leave {
+  background: #fdf3e4;
+  color: var(--warning);
+}
+
+.att-cell {
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.hw-miss-num {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.hw-streak-warn {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.hw-history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+/* ---- v0.6 · 总分趋势迷你折线 ---- */
+.trend-wrap {
+  margin-bottom: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  padding: var(--space-2);
+  background: var(--paper);
+}
+
+.trend-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.trend-num {
+  font-size: 10px;
+  fill: var(--ink-600);
+  font-family: var(--font-num);
+}
+
+.trend-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--ink-400);
+  padding: 0 var(--space-1);
+}

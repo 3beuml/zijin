@@ -25,7 +25,7 @@ export async function buildRegisterWorkbook(
   wb.creator = '子衿';
   const ws = wb.addWorksheet('周手册');
 
-  ws.mergeCells('A1:G1');
+  ws.mergeCells('A1:I1');
   const titleCell = ws.getCell('A1');
   titleCell.value = `${meta.title}（${meta.range}）`;
   titleCell.font = { bold: true, size: 14 };
@@ -33,7 +33,7 @@ export async function buildRegisterWorkbook(
   ws.getRow(1).height = 24;
 
   const types = ['沟通', '谈心', '家访'];
-  const header = ['学生', ...types, '其他', '最近成绩', '本周摘要'];
+  const header = ['学生', ...types, '其他', '考勤', '作业', '最近成绩', '本周摘要'];
   const headRow = ws.addRow(header);
   headRow.font = { bold: true };
   headRow.eachCell((cell) => {
@@ -52,6 +52,8 @@ export async function buildRegisterWorkbook(
       colCount(row, types, '谈心') || null,
       colCount(row, types, '家访') || null,
       colCount(row, types, '其他') || null,
+      row.attendanceLabel || null,
+      row.homeworkMissed ?? null,
       lastScore,
       row.summary || '本周无记录',
     ]);
@@ -65,15 +67,15 @@ export async function buildRegisterWorkbook(
   }
 
   ws.columns.forEach((col, i) => {
-    col.width = i === 6 ? 42 : i === 0 ? 10 : i === 5 ? 20 : 8;
+    col.width = i === 8 ? 42 : i === 0 ? 10 : i === 7 ? 20 : i === 5 ? 12 : 8;
   });
 
   if (meta.nextWeek.length) {
     ws.addRow([]);
-    const nw = ws.addRow(['下周重点', '', '', '', '', '', '']);
+    const nw = ws.addRow(['下周重点', '', '', '', '', '', '', '', '']);
     nw.font = { bold: true };
     for (const t of meta.nextWeek.slice(0, 10)) {
-      ws.addRow([`${t.due} ${t.title}${t.student ? `（${t.student}）` : ''}`, '', '', '', '', '', '']);
+      ws.addRow([`${t.due} ${t.title}${t.student ? `（${t.student}）` : ''}`, '', '', '', '', '', '', '', '']);
     }
   }
   ws.addRow([]);

@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react';
 import type { AppData } from '../../domain/types.ts';
 import { weeklySummary } from '../../domain/weekly.ts';
-import { filterStudents } from '../../domain/students.ts';
+import { filterStudents, sortByRecentRecord } from '../../domain/students.ts';
 import { todayStr } from '../util.ts';
 
 export function StudentsScreen({
@@ -15,12 +15,16 @@ export function StudentsScreen({
   const [scope, setScope] = useState<'mine' | 'all'>(data.settings.advisor ? 'mine' : 'all');
   const [q, setQ] = useState('');
   const [onlyUncovered, setOnlyUncovered] = useState(false);
+  const [gender, setGender] = useState<'' | '男' | '女'>('');
+  const [dorm, setDorm] = useState('');
+  const [tag, setTag] = useState('');
+  const [sortBy, setSortBy] = useState<'default' | 'recent'>('default');
   const today = todayStr();
 
   const week = useMemo(() => weeklySummary(data.students, data.records, today), [data, today]);
   const contacted = new Set(week.countByStudent.keys());
 
-  const students = useMemo(
+  const filtered = useMemo(
     () =>
       filterStudents(data.students, {
         scope,
@@ -28,13 +32,24 @@ export function StudentsScreen({
         keyword: q,
         onlyUncovered,
         contactedThisWeek: contacted,
+        gender,
+        dorm,
+        tag,
       }),
-    [data.students, data.settings.advisor, scope, q, onlyUncovered, today],
+    [data.students, data.settings.advisor, scope, q, onlyUncovered, gender, dorm, tag, today],
+  );
+  const students = useMemo(
+    () => (sortBy === 'recent' ? sortByRecentRecord(filtered, data.records) : filtered),
+    [filtered, data.records, sortBy],
   );
 
   const mineCount = data.settings.advisor
     ? data.students.filter((s) => s.advisor === data.settings.advisor).length
     : 0;
+
+  // 筛选选项：宿舍/标签来自库里已有的值（没填过就不显示这个筛选项）
+  const dorms = [...new Set(data.students.map((s) => s.dorm).filter((d): d is string => !!d))].sort((a, b) => a.localeCompare(b, 'zh'));
+  const tags = [...new Set(data.students.flatMap((s) => s.tags ?? []))].sort((a, b) => a.localeCompare(b, 'zh'));
 
   return (
     <div className="page">
@@ -79,6 +94,44 @@ export function StudentsScreen({
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />
+
+      {data.students.length > 0 && (
+        <div className="filter-row">
+          <button className={`chip${gender === '' ? ' active' : ''}`} onClick={() => setGender('')}>
+            全部
+          </button>
+          <button className={`chip${gender === '男' ? ' active' : ''}`} onClick={() => setGender(gender === '男' ? '' : '男')}>
+            男
+          </button>
+          <button className={`chip${gender === '女' ? ' active' : ''}`} onClick={() => setGender(gender === '女' ? '' : '女')}>
+            女
+          </button>
+          <button
+            className={`chip${sortBy === 'recent' ? ' active' : ''}`}
+            onClick={() => setSortBy(sortBy === 'recent' ? 'default' : 'recent')}
+            title="按最近一次沟通记录时间排序"
+          >
+            按最近沟通
+          </button>
+          {dorms.length > 0 && (
+            <select className="filter-select" value={dorm} onChange={(e) => setDorm(e.target.value)} aria-label="按宿舍筛选">
+              <option value="">宿舍不限</option>
+              {dorms.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          )}
+          {tags.length > 0 && (
+            <select className="filter-select" value={tag} onChange={(e) => setTag(e.target.value)} aria-label="按标签筛选">
+              <option value="">标签不限</option>
+              {tags.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
       {students.length === 0 ? (
         <div className="empty-hint">
           {data.students.length === 0 ? (
@@ -105,7 +158,10 @@ export function StudentsScreen({
                         <span className="tag mine-tag">分包</span>
                       ) : null}
                     </span>
-                    <span className="row-sub">{s.advisor ? `导师 ${s.advisor}` : '未分包'}</span>
+                    <span className="row-sub">
+                      {[s.dorm, (s.tags ?? []).join('、')].filter(Boolean).join(' · ') ||
+                        (s.advisor ? `导师 ${s.advisor}` : '未分包')}
+                    </span>
                   </span>
                   <span className={`row-side ${count > 0 ? 'ok' : 'warn'}`}>
                     {count > 0 ? `本周 ${count} 次` : '本周未联系'}
