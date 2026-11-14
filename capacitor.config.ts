@@ -4,6 +4,9 @@ const config: CapacitorConfig = {
   appId: 'io.github.beuml.zijin',
   appName: '子衿',
   webDir: 'dist',
+  android: {
+    adjustMarginsForEdgeToEdge: 'auto',
+  },
 };
 
 export default config;

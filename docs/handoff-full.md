@@ -432,3 +432,20 @@ node scripts/accept.mjs dump.json
 - 与原计划的偏差：真机验证只能模拟 content://（微信私有 FileProvider 的行为无法在此环境复现，
   但 content:// + grantUriPermissions 是同一机制）；octet-stream 全注册是有意取舍。
 - 闸门：135/135 单测；build 通过；APK versionName 0.7.0 / versionCode 4 已 adb 安装真机。
+
+## 阶段 21 完成（v0.7.1 · 状态栏重叠修复 + 真机巡检）
+- 背景：用户真机（Android 16 / SDK 36）反馈页面标题（如「学生」）与系统状态栏重叠。
+- 根因：targetSdk 35 起安卓强制 edge-to-edge，WebView 满屏绘制，标题画进了状态栏区域。
+- 修复：①capacitor.config.ts 加 android.adjustMarginsForEdgeToEdge='auto'（系统按 WindowInsets
+  给 WebView 四边加边距，SDK≥35 生效）；②主题 windowBackground 调成纸面色 #FBF9F5
+  （状态栏后面露出的是窗口底色）；③windowLightStatusBar=true 声明深色状态栏图标
+  （加边距后图标一度变浅看不见）。
+- 真机验证（截屏）：今日/学生/我的/成绩分析四屏标题全部不重叠、状态栏图标深色清晰、
+  底部 tabbar 抬到手势条上方。
+- 过程坑：capacitor.config.ts 里写**中文注释**会让 @capacitor/cli 的配置加载静默失败、
+  回退默认 webDir='www'（报「找不到 web assets directory」）——去注释后恢复正常；
+  已在配置文件里避免中文注释，坑记录在此。
+- 顺便巡检：logcat 无 JS 错误无崩溃；数据复查发现样例练习数据（33 虚构）与真实数据（33）
+  仍混存共 66 人——已给出清空重导步骤（用户自操作）；键盘弹出行为因用户正在用手机、
+  停止了模拟点击，未验证（列为待用户自检项）。
+- 闸门：135/135 单测；build 通过；APK versionName 0.7.1 / versionCode 5。

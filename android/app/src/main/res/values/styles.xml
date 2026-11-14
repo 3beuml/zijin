@@ -13,6 +13,10 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- v0.7.1：edge-to-edge 后状态栏后面露出的是窗口背景，调成纸面色避免一条白边 -->
+        <item name="android:windowBackground">#FBF9F5</item>
+        <!-- 纸面色上用深色状态栏图标（windowLightStatusBar = 浅色状态栏） -->
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 
 
