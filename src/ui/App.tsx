@@ -13,6 +13,7 @@ import { map } from '../domain/import/map.ts';
 import { commit } from '../domain/import/commit.ts';
 import type { ImportMapping } from '../domain/import/types.ts';
 import { tablesFromBuffer, type SheetTable } from '../lib/xlsx.ts';
+import { onNativeFile } from '../lib/nativeOpen.ts';
 import { HomeScreen } from './screens/HomeScreen';
 import { StudentsScreen } from './screens/StudentsScreen';
 import { StudentDetail } from './screens/StudentDetail';
@@ -40,6 +41,29 @@ const QUICK_TYPES: [string, (props: { size?: number }) => JSX.Element][] = [
   ['家访', IconHomeVisit],
   ['其他', IconMore],
 ];
+
+/**
+ * 打开某张表的导入确认流程。放在模块层的原因：微信「用其他应用打开」的回调
+ * 可能在首次渲染（数据未加载、提前 return）时就触发，那次渲染里组件局部函数
+ * 尚未初始化（TDZ）——这里只用模块级纯函数和 setState，安全。
+ */
+function openImportForTable(
+  fileName: string,
+  sheet: SheetTable,
+  setPendingImport: (p: PendingImport | null) => void,
+  setSheetPick: (s: { fileName: string; sheets: SheetTable[] } | null) => void,
+): void {
+  const table = sheet.table;
+  const sketch = detect(table);
+  const mapping = map(table, sketch, [], {});
+  setSheetPick(null);
+  setPendingImport({
+    fileName: `${fileName}（${sheet.name}）`,
+    table,
+    sketchHeaderRows: sketch.headerRows,
+    mapping,
+  });
+}
 
 export default function App() {
   const [data, setData] = useState<AppData | null>(null);
@@ -69,6 +93,24 @@ export default function App() {
       // 每天首次打开自动快照（失败不打扰使用，只是少了保险）
       takeDailySnapshot(next, new Date().toISOString().slice(0, 10)).catch(() => {});
     });
+  }, []);
+
+  // v0.7：微信/文件管理器「用其他应用打开」或分享成绩表进来 → 直接进导入确认流程
+  useEffect(() => {
+    void onNativeFile(
+      ({ name, sheets }) => {
+        if (sheets.length === 0) {
+          alert('这份文件里没有找到有数据的表格。');
+          return;
+        }
+        if (sheets.length === 1) {
+          openImportForTable(name, sheets[0], setPendingImport, setSheetPick);
+          return;
+        }
+        setSheetPick({ fileName: name, sheets });
+      },
+      (msg) => alert(`读表失败：${msg}`),
+    );
   }, []);
 
   if (!loaded || data == null) {
@@ -140,16 +182,7 @@ export default function App() {
     }
   };
   const startImportFlow = (fileName: string, sheet: SheetTable) => {
-    const { table, name } = { table: sheet.table, name: sheet.name };
-    const sketch = detect(table);
-    const mapping = map(table, sketch, [], {});
-    setSheetPick(null);
-    setPendingImport({
-      fileName: `${fileName}（${name}）`,
-      table,
-      sketchHeaderRows: sketch.headerRows,
-      mapping,
-    });
+    openImportForTable(fileName, sheet, setPendingImport, setSheetPick);
   };
   const confirmImport = (mapping: ImportMapping) => {
     if (!pendingImport) return;

@@ -404,3 +404,31 @@ node scripts/accept.mjs dump.json
   我的作业历史（改/删）、筛选行——全部核对通过。
 - 与原计划的偏差：宿舍/标签筛选在档案没填过时隐藏（避免空下拉）；作业"未交"口径不含迟交
   （streak 里迟交延续、周手册列只数未交——口径写进 homework.ts 注释）；APK 0.6.0 重打并 adb 安装真机。
+
+## 阶段 20 完成（v0.7 · 微信「用其他应用打开」直通导入）
+- 背景：用户反馈微信里收到的成绩表无法选择用子衿打开——应用没有注册文件打开意图。
+- 实际做了什么：
+  - AndroidManifest 给 MainActivity 加 VIEW / SEND 两组 intent-filter（xlsx/xls/csv/octet-stream，
+    octet-stream 是为了接住微信对未知扩展名文件的兜底 MIME，代价是子衿会出现在所有文件的
+    打开方式里——与 WPS 同策略）。
+  - 新增本地 Capacitor 插件 OpenFilePlugin（android/…/OpenFilePlugin.java）：VIEW 取 getData、
+    SEND 取 EXTRA_STREAM，读 content:// 流转 base64（25MB 上限）交 JS，不落盘；
+    冷启动走 getInitialFile()（用后清 intent 防重复），热启动走 handleOnNewIntent → fileOpened 事件。
+  - MainActivity 在 super.onCreate **之前** registerPlugin（首版放在后面，插件没进桥，
+    logcat 报 "OpenFile plugin is not implemented"——Capacitor 的注册顺序要求）。
+  - JS 桥 src/lib/nativeOpen.ts：订阅事件 + 冷启动文件 → tablesFromBuffer → 复用确认导入流程；
+    浏览器 dev 里 isNativePlatform() 为 false 整段静默。
+  - 修复过程中抓到两个真 bug：①读取失败静默无反应 → getInitialFile 对「有打开意图但读不出」
+    返回 error 并由 UI 明确提示；②**TDZ 崩溃**——native 回调可能在首次渲染（data 未加载、提前
+    return）时触发，那次渲染里组件局部函数 startImportFlow 未初始化，回调闭包踩 TDZ
+    （压缩后表现为 "Cannot access 'W' before initialization"，用 --minify false 构建定位到真名）。
+    修法：把导入流程提为模块层函数 openImportForTable（只用模块级纯函数 + setState）。
+- 验证（真机，adb）：
+  - `cmd package query-activities`：xlsx / ms-excel / csv / octet-stream 四种 MIME 的 VIEW 与 SEND，
+    子衿全部在列 ✅
+  - MediaStore content URI 冒烟：冷启动 → 确认导入页直接出现（文件名/警告/考试命名/22 列样例）✅；
+    热启动（App 已开）→ onNewIntent → 同样出现 ✅
+  - 失败路径：file://（shell 无读权限）→ 明确中文错误提示，不静默 ✅
+- 与原计划的偏差：真机验证只能模拟 content://（微信私有 FileProvider 的行为无法在此环境复现，
+  但 content:// + grantUriPermissions 是同一机制）；octet-stream 全注册是有意取舍。
+- 闸门：135/135 单测；build 通过；APK versionName 0.7.0 / versionCode 4 已 adb 安装真机。
