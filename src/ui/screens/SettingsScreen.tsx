@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { AppData, Homework } from '../../domain/types.ts';
 import { distinctAdvisors } from '../../domain/students.ts';
 import { missingStudentsOf } from '../../domain/homework.ts';
-import { downloadFile } from '../print.ts';
+import { shareOrDownloadFile } from '../print.ts';
 import { todayStr } from '../util.ts';
 import { normalizeData, listSnapshots, type Snapshot } from '../../storage/db.ts';
 import { HomeworkSheet } from '../components/HomeworkSheet.tsx';
@@ -198,8 +198,17 @@ export function SettingsScreen({
             className="btn"
             onClick={() => {
               const name = `子衿备份-${todayStr()}.json`;
-              downloadFile(JSON.stringify(data, null, 2), name, 'application/json');
-              alert(`已生成 ${name}`);
+              void shareOrDownloadFile(JSON.stringify(data, null, 2), name, 'application/json')
+                .then((how) => {
+                  alert(
+                    how === 'shared'
+                      ? `备份已生成（${name}），在分享面板里选一个去处——建议发到微信「文件传输助手」。`
+                      : `已生成 ${name}。`,
+                  );
+                })
+                .catch(() => {
+                  // 用户取消了分享面板：不算失败，什么都不做
+                });
             }}
           >
             导出备份 JSON
@@ -233,7 +242,7 @@ export function SettingsScreen({
         <h2 className="card-title">数据</h2>
         <p className="muted">
           当前 {data.students.length} 名学生 · {data.exams.length} 场考试 · {data.records.length} 条记录。
-          数据只存在本机。
+          数据只存在本机。当前版本 子衿 v1.0.2。
         </p>
         <button className={`btn ${wipeArmed ? 'danger-solid' : 'danger'}`} onClick={wipe}>
           {wipeArmed ? '再点一次确认清空' : '清空全部数据…'}

@@ -484,3 +484,14 @@ node scripts/accept.mjs dump.json
   图标立即刷新——分发后的升级方式即此流程。
 - 版本：versionName 1.0.1 / versionCode 7。交付 子衿-v1.0.1-release.apk（发给老师的文件）。
 - 教训：自适应图标的前景层在 ROM 启动器上兼容性不可控，**用 PNG 不用矢量**。
+
+## 阶段 24 完成（v1.0.2 · 备份导出真机失效修复 + 版本号显示）
+- 背景：用户问「发给老师还有哪些没考虑到」。排查发现**数据安全级 bug**：Capacitor 安卓 WebView
+  没有 blob 下载处理（BridgeWebChromeClient 无 onDownloadStart/DownloadManager 逻辑，已查源码确认），
+  「导出备份 JSON」用的浏览器式 <a download> 在真机上会**静默失败**——数据安全命门。
+- 修复：print.ts 新增 shareOrDownloadFile（Web Share API files 优先，浏览器回退 downloadFile），
+  备份导出与 Excel/A4 出口同一条已验证的分享路径；用户取消分享面板不算失败。下载类出口现全部收敛。
+- 顺带：我的 → 数据 卡显示当前版本号（v1.0.2）——远程支持/升级时能问出老师装的是哪版。
+- 验证：135 单测 + build 通过；真机分享面板实测因手机断开未跑（与 Excel 导出同一机制，
+  Web Share files 在 Chrome/WebView 75+ 支持），**留待用户手机点一次「导出备份 JSON」确认**。
+- 版本：versionName 1.0.2 / versionCode 8。交付 子衿-v1.0.2-release.apk。

@@ -125,6 +125,34 @@ export function downloadFile(content: string, fileName: string, mime: string): s
   return downloadBlob(new Blob([content], { type: mime }), fileName);
 }
 
+/**
+ * 安卓 WebView 不支持 blob 下载（无 DownloadManager 桥），备份导出必须优先走系统分享。
+ * 分享不可用（浏览器环境）时回退到 <a download>。返回落位方式供提示语使用。
+ */
+export async function shareOrDownloadFile(
+  content: string,
+  fileName: string,
+  mime: string,
+): Promise<'shared' | 'downloaded'> {
+  const blob = new Blob([content], { type: mime });
+  const file = new File([blob], fileName, { type: mime });
+  const nav = navigator as Navigator & {
+    canShare?: (d: { files?: File[] }) => boolean;
+    share?: (d: { files?: File[]; title?: string }) => Promise<void>;
+  };
+  if (nav.canShare && nav.share && nav.canShare({ files: [file] })) {
+    try {
+      await nav.share({ files: [file], title: fileName });
+      return 'shared';
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') throw e; // 用户取消分享面板
+      // 其他错误 → 尝试下载回退
+    }
+  }
+  downloadFile(content, fileName, mime);
+  return 'downloaded';
+}
+
 /** Blob 版下载（xlsx 等二进制用） */
 export function downloadBlob(blob: Blob, fileName: string): string {
   const url = URL.createObjectURL(blob);
