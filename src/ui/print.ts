@@ -18,7 +18,10 @@ function esc(s: string): string {
 export function buildWeeklyHtml(data: AppData, refDate: string, teacherLine = ''): string {
   const mine = myStudents(data.students, data.settings.advisor);
   const scopeStudents = mine.length > 0 ? mine : data.students;
-  const reg = weeklyRegister(scopeStudents, data.records, data.scores, data.exams, refDate);
+  const reg = weeklyRegister(scopeStudents, data.records, data.scores, data.exams, refDate, {
+    attendance: data.attendance,
+    homework: data.homework,
+  });
   const week = weeklySummary(scopeStudents, data.records, refDate);
   const weekRecords = data.records
     .filter((r) => r.date >= reg.start && r.date <= reg.end)
@@ -44,6 +47,8 @@ export function buildWeeklyHtml(data: AppData, refDate: string, teacherLine = ''
         <td>${esc(row.student.name)}</td>
         ${typeCols.map((t) => `<td class="c">${count(t)}</td>`).join('')}
         <td class="c">${count('其他')}</td>
+        <td class="c">${esc(row.attendanceLabel || '—')}</td>
+        <td class="c">${row.homeworkMissed == null ? '—' : String(row.homeworkMissed)}</td>
         <td>${esc(last)}</td>
         <td>${esc(row.summary || '本周无记录')}</td>
       </tr>`;
@@ -94,7 +99,7 @@ export function buildWeeklyHtml(data: AppData, refDate: string, teacherLine = ''
 
   <h2>登记表（每人一行）</h2>
   <table>
-    <thead><tr><th>学生</th>${typeCols.map((t) => `<th class="c">${t}</th>`).join('')}<th class="c">其他</th><th>最近成绩</th><th>本周摘要</th></tr></thead>
+    <thead><tr><th>学生</th>${typeCols.map((t) => `<th class="c">${t}</th>`).join('')}<th class="c">其他</th><th class="c">考勤</th><th class="c">作业</th><th>最近成绩</th><th>本周摘要</th></tr></thead>
     <tbody>${regRows}</tbody>
   </table>
 
@@ -118,6 +123,34 @@ export function buildWeeklyHtml(data: AppData, refDate: string, teacherLine = ''
 /** 触发下载（浏览器）；返回文件名 */
 export function downloadFile(content: string, fileName: string, mime: string): string {
   return downloadBlob(new Blob([content], { type: mime }), fileName);
+}
+
+/**
+ * 安卓 WebView 不支持 blob 下载（无 DownloadManager 桥），备份导出必须优先走系统分享。
+ * 分享不可用（浏览器环境）时回退到 <a download>。返回落位方式供提示语使用。
+ */
+export async function shareOrDownloadFile(
+  content: string,
+  fileName: string,
+  mime: string,
+): Promise<'shared' | 'downloaded'> {
+  const blob = new Blob([content], { type: mime });
+  const file = new File([blob], fileName, { type: mime });
+  const nav = navigator as Navigator & {
+    canShare?: (d: { files?: File[] }) => boolean;
+    share?: (d: { files?: File[]; title?: string }) => Promise<void>;
+  };
+  if (nav.canShare && nav.share && nav.canShare({ files: [file] })) {
+    try {
+      await nav.share({ files: [file], title: fileName });
+      return 'shared';
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') throw e; // 用户取消分享面板
+      // 其他错误 → 尝试下载回退
+    }
+  }
+  downloadFile(content, fileName, mime);
+  return 'downloaded';
 }
 
 /** Blob 版下载（xlsx 等二进制用） */

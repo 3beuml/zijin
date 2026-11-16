@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import type { AppData, Todo } from '../../domain/types.ts';
 import { todoViews, toggleTodo, todosDueBetween } from '../../domain/todo.ts';
 import { TodoForm } from '../components/TodoForm.tsx';
-import { nowIso, todayStr } from '../util.ts';
+import { nowIso, shiftDate, todayStr } from '../util.ts';
 
 const PRIO_LABEL: Record<Todo['priority'], string> = { high: '高', mid: '中', low: '低' };
 
@@ -101,6 +101,20 @@ export function TodosScreen({
                     </span>
                   </span>
                   <span className="row-side">
+                    {overdue && (
+                      <button
+                        className="link-btn"
+                        onClick={() => {
+                          const tomorrow = shiftDate(today, 1);
+                          void onUpdate({
+                            ...data,
+                            todos: data.todos.map((x) => (x.id === t.id ? { ...x, due: tomorrow } : x)),
+                          });
+                        }}
+                      >
+                        顺延
+                      </button>
+                    )}
                     <button className="link-btn" onClick={() => setEditing(t)}>
                       编辑
                     </button>

@@ -28,3 +28,5 @@ android/app/build/
 android/build/
 android/local.properties
 android/capacitor-cordova-android-plugins/
+.preview/
+android/app/zijin-release.keystore

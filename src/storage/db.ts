@@ -19,21 +19,78 @@ export function emptyData(): AppData {
     scores: [],
     records: [],
     todos: [],
+    attendance: [],
+    homework: [],
     settings: { advisor: '' },
   };
 }
 
-/** 旧备份 / 旧库兼容：补齐 v0.2 新增的 todos 与 settings */
+/** 考勤/作业的合法取值（db 层自持一份，不 import domain 业务逻辑） */
+const ATT_TYPES = ['迟到', '早退', '病假', '事假', '旷课', '离校'];
+const HW_STATUSES = ['交', '迟交', '未交', '补交', '免交'];
+
+/**
+ * 旧备份 / 旧库兼容：补齐 v0.2 新增的 todos 与 settings、v0.6 新增的 attendance 与 homework。
+ * v0.5 起逐项校验：备份文件可能是手工编辑过的，坏行（缺 id/姓名、缺池）直接丢弃，
+ * 不让脏数据进库把界面搞崩。
+ */
 export function normalizeData(raw: Partial<AppData> | null): AppData {
   const base = emptyData();
   if (!raw) return base;
+  const students = (Array.isArray(raw.students) ? raw.students : []).filter(
+    (s): s is AppData['students'][number] =>
+      !!s && typeof s === 'object' && typeof s.id === 'string' && typeof s.name === 'string' && s.name.trim() !== '',
+  );
+  const exams = (Array.isArray(raw.exams) ? raw.exams : []).filter(
+    (e): e is AppData['exams'][number] => !!e && typeof e === 'object' && typeof e.id === 'string' && typeof e.label === 'string',
+  );
+  const examIds = new Set(exams.map((e) => e.id));
+  const studentIds = new Set(students.map((s) => s.id));
+  const scores = (Array.isArray(raw.scores) ? raw.scores : []).filter(
+    (s): s is AppData['scores'][number] =>
+      !!s && typeof s === 'object' &&
+      typeof s.studentId === 'string' && typeof s.examId === 'string' &&
+      typeof s.subject === 'string' &&
+      studentIds.has(s.studentId) && examIds.has(s.examId) &&
+      !!s.pool && typeof s.pool === 'object' && typeof s.pool.scope === 'string',
+  );
+  const records = (Array.isArray(raw.records) ? raw.records : []).filter(
+    (r): r is AppData['records'][number] =>
+      !!r && typeof r === 'object' && typeof r.id === 'string' &&
+      typeof r.studentId === 'string' && studentIds.has(r.studentId) &&
+      typeof r.content === 'string',
+  );
+  const todos = (Array.isArray(raw.todos) ? raw.todos : []).filter(
+    (t): t is AppData['todos'][number] =>
+      !!t && typeof t === 'object' && typeof t.id === 'string' && typeof t.title === 'string',
+  );
+  const attendance = (Array.isArray(raw.attendance) ? raw.attendance : []).filter(
+    (a): a is AppData['attendance'][number] =>
+      !!a && typeof a === 'object' && typeof a.id === 'string' &&
+      typeof a.studentId === 'string' && studentIds.has(a.studentId) &&
+      typeof a.date === 'string' && ATT_TYPES.includes(a.type),
+  );
+  const homework = (Array.isArray(raw.homework) ? raw.homework : []).filter(
+    (h): h is AppData['homework'][number] =>
+      !!h && typeof h === 'object' && typeof h.id === 'string' && typeof h.date === 'string' &&
+      Array.isArray(h.records),
+  ).map((h) => ({
+    ...h,
+    records: h.records.filter(
+      (r): r is AppData['homework'][number]['records'][number] =>
+        !!r && typeof r === 'object' && typeof r.studentId === 'string' &&
+        studentIds.has(r.studentId) && HW_STATUSES.includes(r.status),
+    ),
+  }));
   return {
     version: 1,
-    students: Array.isArray(raw.students) ? raw.students : base.students,
-    exams: Array.isArray(raw.exams) ? raw.exams : base.exams,
-    scores: Array.isArray(raw.scores) ? raw.scores : base.scores,
-    records: Array.isArray(raw.records) ? raw.records : base.records,
-    todos: Array.isArray(raw.todos) ? raw.todos : base.todos,
+    students,
+    exams,
+    scores,
+    records,
+    todos,
+    attendance,
+    homework,
     settings: raw.settings && typeof raw.settings === 'object'
       ? { advisor: typeof raw.settings.advisor === 'string' ? raw.settings.advisor : '' }
       : base.settings,

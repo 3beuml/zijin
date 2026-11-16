@@ -2,6 +2,7 @@
  * 今日：早上 30 秒知道「今天几件事、谁还没聊」。
  * 参考 teacher 的今日页：待办（逾期置顶）+ 分包覆盖卡 + 快捷记录 + 近期重要工作。
  * 铁律：今日页不显示成绩排名，避免在教室被学生看到（teacher 需求 §5.1）。
+ * v0.5：空库时给三步引导（导入成绩表 → 设置分包 → 记一笔），不再出现「0/0 全覆盖✓」的怪相。
  */
 import { useMemo, useState } from 'react';
 import type { AppData, Todo } from '../../domain/types.ts';
@@ -10,6 +11,7 @@ import { myStudents } from '../../domain/students.ts';
 import { weeklySummary } from '../../domain/weekly.ts';
 import { newId, nowIso, shortDate, shiftDate, todayStr } from '../util.ts';
 import { QuickRecordSheet } from '../components/QuickRecordSheet.tsx';
+import { IconNotebookEmpty, IconImport, IconStudents, IconTalk } from '../icons.tsx';
 
 const QUICK_TYPES = ['沟通', '谈心', '家访', '其他'];
 
@@ -21,6 +23,7 @@ export function HomeScreen({
   onGoTodos,
   onGoWeekly,
   onOpenSearch,
+  onGoImport,
 }: {
   data: AppData;
   onUpdate: (next: AppData) => Promise<void>;
@@ -29,6 +32,7 @@ export function HomeScreen({
   onGoTodos: () => void;
   onGoWeekly: () => void;
   onOpenSearch: () => void;
+  onGoImport: () => void;
 }) {
   const today = todayStr();
   const [quickType, setQuickType] = useState<string | null>(null);
@@ -69,14 +73,50 @@ export function HomeScreen({
         搜学生 / 记录 / 待办…
       </button>
 
-      {/* 周手册入口（design-ui：周手册放今日页顶部入口） */}
-      <section className="card weekly-entry" onClick={onGoWeekly} role="button" aria-label="打开周手册">
-        <span className="row-main">
-          <span className="row-name">周手册 · {shortDate(week.start)} – {shortDate(week.end)}</span>
-          <span className="row-sub">已沟通 {week.covered}/{scopeStudents.length} · 点开登记表与导出</span>
-        </span>
-        <span className="row-side">›</span>
-      </section>
+      {data.students.length === 0 ? (
+        /* 空库三步引导：第一次打开的人照着做就能开始 */
+        <section className="card onboarding">
+          <div className="onboarding-art">
+            <IconNotebookEmpty size={72} />
+          </div>
+          <h2 className="card-title">三步开始使用</h2>
+          <ol className="onboarding-steps">
+            <li>
+              <span className="step-icon"><IconImport size={18} /></span>
+              <span className="step-body">
+                <b>导入成绩表</b>
+                <small>Excel / CSV 文件，App 自动认列</small>
+                <button className="btn primary" onClick={onGoImport}>选择文件导入</button>
+              </span>
+            </li>
+            <li>
+              <span className="step-icon"><IconStudents size={18} /></span>
+              <span className="step-body">
+                <b>设置「我是哪位导师」</b>
+                <small>到「我的 → 分包」，学生列表就只看你的学生</small>
+              </span>
+            </li>
+            <li>
+              <span className="step-icon"><IconTalk size={18} /></span>
+              <span className="step-body">
+                <b>记一笔沟通</b>
+                <small>点下面任意类型按钮，十几秒记完</small>
+              </span>
+            </li>
+          </ol>
+        </section>
+      ) : (
+        <>
+          {/* 周手册入口（design-ui：周手册放今日页顶部入口） */}
+          <section className="card weekly-entry" onClick={onGoWeekly} role="button" aria-label="打开周手册">
+            <span className="row-main">
+              <span className="row-name">周手册 · {shortDate(week.start)} – {shortDate(week.end)}</span>
+              <span className="row-sub">已沟通 {week.covered}/{scopeStudents.length} · 点开登记表与导出</span>
+            </span>
+            <span className="row-side">›</span>
+          </section>
+        </>
+      )}
 
       {(views.overdue.length > 0 || views.today.length > 0) && (
         <section className="card">
@@ -108,27 +148,29 @@ export function HomeScreen({
         </section>
       )}
 
-      <section
-        className="card highlight"
-        onClick={onGoStudents}
-        role="button"
-        aria-label="查看本周覆盖"
-      >
-        <div className="coverage">
-          <span className="coverage-num num">
-            {week.covered}/{scopeStudents.length}
-          </span>
-          <span className="coverage-label">本周已沟通{mine.length > 0 ? '（分包）' : ''}</span>
-        </div>
-        {uncovered.length > 0 ? (
-          <div className="muted">
-            还差 {uncovered.length} 人：{uncovered.slice(0, 6).map((s) => s.name).join('、')}
-            {uncovered.length > 6 ? ' …' : ''}
+      {data.students.length > 0 && (
+        <section
+          className="card highlight"
+          onClick={onGoStudents}
+          role="button"
+          aria-label="查看本周覆盖"
+        >
+          <div className="coverage">
+            <span className="coverage-num num">
+              {week.covered}/{scopeStudents.length}
+            </span>
+            <span className="coverage-label">本周已沟通{mine.length > 0 ? '（分包）' : ''}</span>
           </div>
-        ) : (
-          <div className="muted ok-text">本周全覆盖 ✓</div>
-        )}
-      </section>
+          {uncovered.length > 0 ? (
+            <div className="muted">
+              还差 {uncovered.length} 人：{uncovered.slice(0, 6).map((s) => s.name).join('、')}
+              {uncovered.length > 6 ? ' …' : ''}
+            </div>
+          ) : (
+            <div className="muted ok-text">本周全覆盖 ✓</div>
+          )}
+        </section>
+      )}
 
       <section className="card">
         <h2 className="card-title">记一笔</h2>
@@ -139,7 +181,7 @@ export function HomeScreen({
             </button>
           ))}
         </div>
-        <p className="muted">dock 中间的 ＋ 键，任何页面都能直接记。</p>
+        <p className="muted">也可以用底部中间的 ＋ 键，任何页面都能直接记。</p>
       </section>
 
       {soon.length > 0 && (
@@ -168,7 +210,7 @@ export function HomeScreen({
               ...data,
               records: [...data.records, { ...rec, id, studentId, createdAt: nowIso() }],
             });
-            setQuickType(null);
+            // 保存后弹层不关（可连记下一条）
           }}
           onOpenStudent={(id) => {
             setQuickType(null);

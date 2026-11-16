@@ -98,3 +98,40 @@ describe('detect 细节', () => {
     expect(rankPrev.role).toBe('subject.rankPrev');
   });
 });
+
+describe('detect · 边界情况（v0.5）', () => {
+  it('未识别科目的长表头分数列（道德与法治分数）不被归并到左边科目组', () => {
+    const table: Cell[][] = [
+      ['姓名', '英语', '道德与法治分数'],
+      ['张三', 90, 88],
+      ['李四', 85, 92],
+    ];
+    const sketch = detect(table);
+    const daofa = sketch.columns.find((c) => c.header === '道德与法治分数')!;
+    // 没被挂到英语组：subject 不是英语
+    expect(daofa.subject).toBeUndefined();
+    expect(sketch.subjectGroups.find((g) => g.subject === '英语')!.columns.score).toBe(2);
+    // 有明确警告，老师在确认页能看到
+    expect(sketch.warnings.some((w) => w.includes('道德与法治分数') && w.includes('科目'))).toBe(true);
+  });
+
+  it('次别数字超出 1~3（级名4）给出警告', () => {
+    const table: Cell[][] = [
+      ['姓名', '级名4'],
+      ['张三', 5],
+      ['李四', 6],
+    ];
+    const sketch = detect(table);
+    expect(sketch.warnings.some((w) => w.includes('超出支持范围'))).toBe(true);
+  });
+
+  it('「缺考」标记与普通文本分开提示', () => {
+    const table: Cell[][] = [
+      ['姓名', '语文', '数学'],
+      ['张三', '缺考', 90],
+      ['李四', '请假', '８８'],
+    ];
+    const sketch = detect(table);
+    expect(sketch.warnings.some((w) => w.includes('缺考标记'))).toBe(true);
+  });
+});

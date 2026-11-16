@@ -1,5 +1,27 @@
 # 今晚的总任务 —— 子衿 v0.1
 
+> ⚡ **下个会话先读这段：当前状态快照（2026-11-15）**
+>
+> - **版本**：v1.0.2（versionCode 8），**正式签名分发版**，已装到用户真机（Android 16 / Flyme）。
+>   release keystore：`android/app/zijin-release.keystore`，密码在 `android/local.properties`
+>   （两者均 gitignore 不进仓库；**丢失则所有已分发版本无法覆盖升级，必须备份**）。
+> - **分支**：`fix/multi-role-review`——阶段 18–24 的提交都在此分支，未合 main。
+> - **已交付要点**（详见文末各阶段记录）：导入管线加固（重导幂等/逐行班级/CSV/多工作表/确认页
+>   校验/结果页）、考勤+作业实体与统计（v0.6）、微信「用其他应用打开」直通导入（v0.7）、
+>   状态栏 edge-to-edge 修复、正式签名与 debug→release 数据迁移、启动器图标改 PNG 层、
+>   备份导出走系统分享、版本号显示。
+> - **用户侧待办**：实测一次「导出备份 JSON」分享面板；设置分包；「上次」考试改真实名；
+>   **备份 keystore+密码到网盘**；收集真实成绩表样本（脱敏列名）用于迭代 detect。
+> - **软件侧待办**（P1）：给老师的一页纸安装说明；备份提醒条（7 天未导出温和提示）；
+>   空库样例体验入口；「我的」内使用说明卡。学期更替/按考试导出/多导师说明等
+>   P2–P3 见 `docs/teacher-需求对照.md` 第五节。
+> - **工程坑速查**：capacitor.config.ts 别写中文注释（CLI 配置静默失效回退默认 webDir）；
+>   Capacitor registerPlugin 必须在 super.onCreate 之前；自适应图标前景用 PNG 别用矢量（Flyme）；
+>   安卓 WebView 无 blob 下载桥（导出文件一律走系统分享）；Gradle 离线构建依赖本地缓存分发
+>   （断网时从旧哈希目录整拷到当前 URL 对应目录，见阶段 5/22）。
+>
+> ——以下原文是阶段 0 的交接单，**任务范围早已被阶段 1–24 取代**，仅作历史保留。
+
 > 先读 `AGENTS.md`。本文件**取代** `docs/handoff.md` 的「只做 T1」范围。
 > `handoff.md` 里的 T1 规格（探测器）仍然有效，它是本文件的**阶段 2**。
 > 外部验收脚本：`scripts/accept.mjs`（**你不许修改它**）。
@@ -41,7 +63,7 @@
 ```json
 {
   "version": 1,
-  "students": [{ "id": "s1", "name": "张伟", "classId": "c1", "advisor": "王子柔" }],
+  "students": [{ "id": "s1", "name": "张伟", "classId": "c1", "advisor": "王老师" }],
   "exams":    [{ "id": "e1", "label": "期中", "date": "2026-11-11", "order": 2 }],
   "scores":   [{ "studentId": "s1", "examId": "e1", "subject": "数学",
                  "raw": 96, "rank": 5,
@@ -349,3 +371,149 @@ node scripts/accept.mjs dump.json
 - 闸门结果：108/108 单测全绿；build 通过；aapt 验签 0.4.0。
 - 与原计划的偏差：无。文件选择器在应用内浏览器无法自动化（IAB 限制），导入管线靠单测 + accept.mjs
   背书，真机验证留待安装。
+
+## 阶段 18 完成（v0.5 · 四角色审查修复 + 使用者实时反馈）
+- 背景：用户要求以四个角色（不懂手机的班主任 / 啥都不会的领导 / 软件专家 / 美工）审查软件，
+  汇总后由"干活的"修复；特别强调导入成绩的各种情况要做好应对。审查期间用户实时反馈：
+  「输入框太小、打字时看不到相关记录」（原文存 reference/feedback/2026-11-13-输入框太小.md）。
+- 实际做了什么：
+  - 导入管线（domain，均有单测）：①重导同考幂等——同键分数行替换、上次考试只更新名次保留旧分数、
+    本次未覆盖的旧科目行丢弃并警告（修「重导翻倍」数据损坏）；②带班级列的表逐行归班，
+    现算名次逐班进行（修「年级表压成一个班、班内名次实为全表」）；③裸列归并收紧为纯量词表头
+    （「道德与法治分数」不再错挂到英语组）；④姓名列猜测排除数字为主的列（学号）；⑤全角数字
+    ８８．５按数字导入；⑥缺考标记（缺考/旷/病假…）单独提示；⑦次别剥出扩到 1-9、>3 给警告；
+    ⑧修 attempts 集合漏 subject.rankPrev 的 bug（只有上次名次列的表此前不建上次考试）；
+    ⑨detect 表头扫描修「全文本数据行（张三|缺考）被吞成表头」的边界 bug。
+  - 文件格式（lib/xlsx.ts）：.xls（OLE2）给中文指引；.csv 内置解析（分隔符嗅探/引号转义/GBK 回退）；
+    tablesFromBuffer 返回全部工作表，多 sheet 时 UI 先让老师选。
+  - 确认页：每列显示表内真实样例；确认前实时校验（姓名列缺失/重复、分数列没填科目名、
+    没有任何分数列 → 禁用确认按钮）；次别下拉加第3次；考试命名格按实际次别显示。
+  - 结果页：ImportResultSheet 替代 alert（大数字 + 警告全列 + 未导入行折叠）。
+  - UI：textarea 统一 autosize（≥120px）；记一笔/详情表单显示最近记录参考块（避免记重）；
+    所有弹层加 × 关闭钮；空库显示三步引导卡（图标插画）并隐藏「0/0 全覆盖✓」；
+    上次考试块注明「只记了名次」；考试可改名/补日期（ExamMetaSheet）；周手册加滚动提示；
+    前三改数字徽标；备份恢复逐项校验（db.normalizeData）；文案去黑话（dock→底部中间＋键）。
+  - 美工：src/ui/icons.tsx 内联 SVG 图标集（今日/学生/＋/待办/我的/沟通/谈心/家访/其他/导入/关闭等），
+    tabbar 图标+文字，＋动作盘快捷钮带图标，空态插画。
+- 闸门结果：`npx vitest run` → 122/122（新增 14 个边界测试）；`npm run build` → 通过；
+  浏览器复验：空态引导、tab 图标、确认页样例列、结果页、最近记录块、上次名次说明、
+  考试改名落库核对（「本次」→「期中」）全部通过；复验中抓到并修复自建 bug——
+  ExamMetaSheet 渲染在列表分支导致详情页点「改名」无反应（改为挂在外层 Fragment）。
+- 与原计划的偏差：
+  ①「重导刷新」语义与阶段 2 的「只增不改」相反——这是修复数据损坏 bug，有意变更；
+  ②E2E 中 IAB 对部分按钮的 locator 点击超时（应用内浏览器伪象，evaluate 直点立即生效），
+  与阶段 3 记录的 tabbar 伪象同类，应用本身无此问题；
+  ③CSV 的 GBK 解码依赖 TextDecoder('gbk')（Chromium 支持），Node CLI 场景未覆盖（CLI 只吃 xlsx）；
+  ④APK 未重打（按 AGENTS.md，本任务以闸门+分支交付，打包含在下一次交付段）。
+
+## 阶段 19 完成（v0.6 · teacher 需求缺口 P1+P2）
+- 背景：对照 teacher《需求分析与方案》逐条核对（对照表入库 docs/teacher-需求对照.md），
+  用户拍板 P1+P2 一起做——**含数据结构变更（用户已确认）**：AppData 新增 attendance / homework 两个数组。
+- 实际做了什么：
+  - P2 考勤：Attendance 实体（日期/时段/类型六选一/原因）+ domain/attendance.ts（时间线/类型计数/周标签）
+    + AttendanceSheet（记完不关可连记）+ 学生详情考勤卡（汇总 + 最近 5 条可删 + 记考勤入口）。
+  - P2 作业：Homework 实体（一次作业 × 每生状态 交/未交/迟交/补交/免交）+ domain/homework.ts
+    （未交/迟交计数、**连续未交 streak**、最近明细）+ HomeworkSheet（33 人平铺点按循环切换、只看未交、
+    编辑/删除模式）+ 学生详情作业卡（streak ≥3 标红）+ 我的作业历史卡。
+  - 周手册登记表加「考勤」「作业」两列（weeklyRegister 加 extras 参数，向后兼容），三出口同步。
+  - P1：逾期待办「顺延」（due=明天）；记一笔保存后不关弹层可连记 + 多选模式（家长会场景）；
+    学生列表性别筛选 + 按最近沟通排序 + 宿舍/标签筛选（字段已有，纯 filterStudents 扩展）；
+    学生详情总分趋势迷你折线（纯 SVG，≥3 次考试才显示）。
+  - normalizeData 逐项校验扩展到 attendance/homework（旧 v0.4/v0.5 备份恢复自动补齐）。
+- 闸门结果：`npx vitest run` → 135/135（新增 attendance/homework/筛选排序/周手册列 13 个测试）；
+  build 通过；浏览器 E2E：＋盘新入口、考勤连记流程落库、作业名单切换与保存、周手册考勤/作业列
+  （张伟"病假"、王芳/李娜红色未交 1）、详情考勤/作业卡（没交 1 次 · 2026-11-14 未交 数学）、
+  我的作业历史（改/删）、筛选行——全部核对通过。
+- 与原计划的偏差：宿舍/标签筛选在档案没填过时隐藏（避免空下拉）；作业"未交"口径不含迟交
+  （streak 里迟交延续、周手册列只数未交——口径写进 homework.ts 注释）；APK 0.6.0 重打并 adb 安装真机。
+
+## 阶段 20 完成（v0.7 · 微信「用其他应用打开」直通导入）
+- 背景：用户反馈微信里收到的成绩表无法选择用子衿打开——应用没有注册文件打开意图。
+- 实际做了什么：
+  - AndroidManifest 给 MainActivity 加 VIEW / SEND 两组 intent-filter（xlsx/xls/csv/octet-stream，
+    octet-stream 是为了接住微信对未知扩展名文件的兜底 MIME，代价是子衿会出现在所有文件的
+    打开方式里——与 WPS 同策略）。
+  - 新增本地 Capacitor 插件 OpenFilePlugin（android/…/OpenFilePlugin.java）：VIEW 取 getData、
+    SEND 取 EXTRA_STREAM，读 content:// 流转 base64（25MB 上限）交 JS，不落盘；
+    冷启动走 getInitialFile()（用后清 intent 防重复），热启动走 handleOnNewIntent → fileOpened 事件。
+  - MainActivity 在 super.onCreate **之前** registerPlugin（首版放在后面，插件没进桥，
+    logcat 报 "OpenFile plugin is not implemented"——Capacitor 的注册顺序要求）。
+  - JS 桥 src/lib/nativeOpen.ts：订阅事件 + 冷启动文件 → tablesFromBuffer → 复用确认导入流程；
+    浏览器 dev 里 isNativePlatform() 为 false 整段静默。
+  - 修复过程中抓到两个真 bug：①读取失败静默无反应 → getInitialFile 对「有打开意图但读不出」
+    返回 error 并由 UI 明确提示；②**TDZ 崩溃**——native 回调可能在首次渲染（data 未加载、提前
+    return）时触发，那次渲染里组件局部函数 startImportFlow 未初始化，回调闭包踩 TDZ
+    （压缩后表现为 "Cannot access 'W' before initialization"，用 --minify false 构建定位到真名）。
+    修法：把导入流程提为模块层函数 openImportForTable（只用模块级纯函数 + setState）。
+- 验证（真机，adb）：
+  - `cmd package query-activities`：xlsx / ms-excel / csv / octet-stream 四种 MIME 的 VIEW 与 SEND，
+    子衿全部在列 ✅
+  - MediaStore content URI 冒烟：冷启动 → 确认导入页直接出现（文件名/警告/考试命名/22 列样例）✅；
+    热启动（App 已开）→ onNewIntent → 同样出现 ✅
+  - 失败路径：file://（shell 无读权限）→ 明确中文错误提示，不静默 ✅
+- 与原计划的偏差：真机验证只能模拟 content://（微信私有 FileProvider 的行为无法在此环境复现，
+  但 content:// + grantUriPermissions 是同一机制）；octet-stream 全注册是有意取舍。
+- 闸门：135/135 单测；build 通过；APK versionName 0.7.0 / versionCode 4 已 adb 安装真机。
+
+## 阶段 21 完成（v0.7.1 · 状态栏重叠修复 + 真机巡检）
+- 背景：用户真机（Android 16 / SDK 36）反馈页面标题（如「学生」）与系统状态栏重叠。
+- 根因：targetSdk 35 起安卓强制 edge-to-edge，WebView 满屏绘制，标题画进了状态栏区域。
+- 修复：①capacitor.config.ts 加 android.adjustMarginsForEdgeToEdge='auto'（系统按 WindowInsets
+  给 WebView 四边加边距，SDK≥35 生效）；②主题 windowBackground 调成纸面色 #FBF9F5
+  （状态栏后面露出的是窗口底色）；③windowLightStatusBar=true 声明深色状态栏图标
+  （加边距后图标一度变浅看不见）。
+- 真机验证（截屏）：今日/学生/我的/成绩分析四屏标题全部不重叠、状态栏图标深色清晰、
+  底部 tabbar 抬到手势条上方。
+- 过程坑：capacitor.config.ts 里写**中文注释**会让 @capacitor/cli 的配置加载静默失败、
+  回退默认 webDir='www'（报「找不到 web assets directory」）——去注释后恢复正常；
+  已在配置文件里避免中文注释，坑记录在此。
+- 顺便巡检：logcat 无 JS 错误无崩溃；数据复查发现样例练习数据（33 虚构）与真实数据（33）
+  仍混存共 66 人——已给出清空重导步骤（用户自操作）；键盘弹出行为因用户正在用手机、
+  停止了模拟点击，未验证（列为待用户自检项）。
+- 闸门：135/135 单测；build 通过；APK versionName 0.7.1 / versionCode 5。
+- 后记（同日）：数据清理实际执行方式改为 CDP 外科手术——严格校验（66=33 虚构+33 真实、无重名）
+  后剔除 33 名虚构样例学生及其分数、考试「本次」改称「期中」、当日快照重拍为干净数据、
+  WebView 重载生效；复检 33 人 / 330 行 / 0 重复 / 0 总分不符；PC 端临时备份（含真实名单）已删除。
+  键盘弹出行为真机验证通过（搜索框不被键盘遮挡）。「上次」考试改名与分包设置留待用户操作。
+
+## 阶段 22 完成（v1.0.0 · 正式签名分发版 + 升级链路）
+- 背景：用户要把软件发给老师用，问「直接发 APK 行不行 / 还有没有问题 / 以后能不能升级（现在还是 debug 包）」。
+- 实际做了什么：
+  - **正式签名**：keytool 生成 zijin-release.keystore（RSA 2048，有效期 30 年，gitignore 不进仓库），
+    密码存 android/local.properties（gitignored）；build.gradle 加 signingConfigs.release。
+    **升级的前提是签名一致 + versionCode 递增——keystore 丢失将无法覆盖升级，必须备份。**
+  - **隐私加固**：移除模板默认的 INTERNET 权限（应用零权限、真不联网）；allowBackup=false
+    （学生数据不进任何云备份）；关闭 release 的 WebView 远程调试（Capacitor release 默认行为）。
+  - **正式图标**：自适应图标（靛青底 #2C4A63 + 白色本子笔矢量前景），Android 8+ 生效；
+    更旧设备回退模板默认图标。
+  - 版本 versionName 1.0.0 / versionCode 6（分发起点）。
+  - **真机数据迁移**：debug→release 签名不同必须卸载重装。用 CDP 导出手机数据（33 人）→
+    卸载 debug → 装 release → 走**应用自己的「恢复备份」流程**（文件选择器实测全程可用）注入数据。
+    恢复成功提示「已恢复：33 名学生」；分包卡出现（导师数据在）。
+  - 已知小瑕疵：恢复后当日快照仍是恢复前拍的空快照（次日自动重拍），无实际影响。
+- 验证：aapt 验签 1.0.0/versionCode 6；apksigner v1+v2 通过；uses-permission 仅剩系统自动生成的
+  自定义权限（无 INTERNET）；恢复流程真机全程实测。
+- 交付：子衿-v1.0.0-release.apk（3.5MB，正式签名，发给老师的就是它）。
+
+## 阶段 23 完成（v1.0.1 · 启动器图标渲染修复）
+- 背景：用户桌面图标显示为系统默认机器人兜底图——Flyme 启动器对**矢量前景的自适应图标**
+  运行时渲染失败（aapt2 编译通过、APK 内资源齐全，但 ROM 启动器不支持该形态）。
+- 修复：弃用矢量前景，改用 **PNG 位图图层**——写了一个零依赖的 PNG 生成器
+  （node zlib 手写 PNG 编码 + 像素级圆角矩形/圆形绘制 + 盒式降采样），生成
+  全密度 ic_launcher_foreground.png（108~432px）与 legacy ic_launcher(.round).png（48~192px），
+  anydpi-v26 前景引用回 @mipmap。靛青底 + 白色本子图记，桌面实测清晰可辨。
+- 升级链路真机验证：同签名 versionCode 6→7 覆盖安装（adb install -r），**无需卸载、数据保留**、
+  图标立即刷新——分发后的升级方式即此流程。
+- 版本：versionName 1.0.1 / versionCode 7。交付 子衿-v1.0.1-release.apk（发给老师的文件）。
+- 教训：自适应图标的前景层在 ROM 启动器上兼容性不可控，**用 PNG 不用矢量**。
+
+## 阶段 24 完成（v1.0.2 · 备份导出真机失效修复 + 版本号显示）
+- 背景：用户问「发给老师还有哪些没考虑到」。排查发现**数据安全级 bug**：Capacitor 安卓 WebView
+  没有 blob 下载处理（BridgeWebChromeClient 无 onDownloadStart/DownloadManager 逻辑，已查源码确认），
+  「导出备份 JSON」用的浏览器式 <a download> 在真机上会**静默失败**——数据安全命门。
+- 修复：print.ts 新增 shareOrDownloadFile（Web Share API files 优先，浏览器回退 downloadFile），
+  备份导出与 Excel/A4 出口同一条已验证的分享路径；用户取消分享面板不算失败。下载类出口现全部收敛。
+- 顺带：我的 → 数据 卡显示当前版本号（v1.0.2）——远程支持/升级时能问出老师装的是哪版。
+- 验证：135 单测 + build 通过；真机分享面板实测因手机断开未跑（与 Excel 导出同一机制，
+  Web Share files 在 Chrome/WebView 75+ 支持），**留待用户手机点一次「导出备份 JSON」确认**。
+- 版本：versionName 1.0.2 / versionCode 8。交付 子衿-v1.0.2-release.apk。

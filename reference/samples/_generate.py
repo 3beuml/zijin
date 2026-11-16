@@ -10,13 +10,13 @@ import random
 import re
 
 random.seed(20261111)
-OUT = r"C:\Work\repos\zijin\reference\samples"
+OUT = os.path.dirname(os.path.abspath(__file__))
 
 NAMES = ["张伟", "王芳", "李娜", "刘洋", "陈静", "杨帆", "赵磊", "黄敏", "周涛", "吴倩", "徐鹏",
          "孙丽", "马超", "朱琳", "胡军", "郭燕", "何伟", "高翔", "林雪", "罗强", "郑爽", "梁静",
          "宋佳", "谢峰", "韩雪", "唐磊", "冯娜", "曹阳", "邓超", "许静", "彭飞", "蒋敏", "蔡明"]
 TIERS = ["3区1A", "3区1B", "3区2A", "3区2B"]
-TEACHERS = ["王子柔", "李迎莉"]
+TEACHERS = ["王老师", "李老师"]
 
 
 def make_rows():

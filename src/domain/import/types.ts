@@ -99,6 +99,7 @@ export interface CommitReport {
   studentsMatched: number;
   examsCreated: number;
   scoresWritten: number;
+  scoresUpdated: number; // 同键替换/合并的行数（重导同一次考试不再翻倍）
   droppedRows: { row: number; reason: string }[];
 }
 

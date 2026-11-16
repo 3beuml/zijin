@@ -2,8 +2,9 @@
  * 周汇总：本周覆盖（每个学生本周有没有被记录过）+ 未覆盖名单 + 周登记表。
  * 周一为一周之始。
  */
-import type { Exam, RankPool, RecordItem, Score, Student } from './types.ts';
+import type { Attendance, Exam, Homework, RankPool, RecordItem, Score, Student } from './types.ts';
 import { totalFor } from './score.ts';
+import { attendanceWeekLabel } from './attendance.ts';
 
 /** 'YYYY-MM-DD' → 当日所在周的 [周一, 周日]，均 'YYYY-MM-DD' */
 export function weekOf(date: string): { start: string; end: string } {
@@ -61,7 +62,7 @@ export function recordsOf(records: RecordItem[], studentId: string): RecordItem[
     .sort((a, b) => (b.createdAt || b.date).localeCompare(a.createdAt || a.date));
 }
 
-/** 登记表一行：一个学生本周的次数 + 最近成绩 + 摘要（周手册 16 人表用） */
+/** 登记表一行：一个学生本周的次数 + 最近成绩 + 摘要 + 考勤/作业（v0.6，周手册 16 人表用） */
 export interface WeekRow {
   student: Student;
   countByType: Map<string, number>; // 记录类型 → 本周次数
@@ -70,11 +71,14 @@ export interface WeekRow {
   total: number | null; // 最近一次考试的总分（现算）
   rank: number | null; // 最近一次考试的总分名次
   poolLabel: string; // 名次池标签（没有池则 ''）
+  attendanceLabel: string; // 本周考勤短标签（'迟到2 病假1'，无 → ''）
+  homeworkMissed: number | null; // 本周作业未交次数（周内无作业 → null）
 }
 
 /**
  * 周登记表（参考 teacher 的周工作手册：每人一行）。
  * 最近成绩取 order 最大的考试；名次带池标签。
+ * v0.6 加考勤/作业两列（teacher §5.7 的登记表字段）；extras 不传则两列为空（旧调用兼容）。
  */
 export function weeklyRegister(
   students: Student[],
@@ -82,6 +86,7 @@ export function weeklyRegister(
   scores: Score[],
   exams: Exam[],
   refDate: string,
+  extras?: { attendance?: Attendance[]; homework?: Homework[] },
 ): { start: string; end: string; rows: WeekRow[] } {
   const { start, end } = weekOf(refDate);
   const latestExam = [...exams].sort((a, b) => b.order - a.order)[0];
@@ -113,6 +118,20 @@ export function weeklyRegister(
       }
     }
 
+    // 本周考勤短标签（'迟到2 病假1'）
+    const attendanceLabel = extras?.attendance
+      ? attendanceWeekLabel(extras.attendance, student.id, start, end)
+      : '';
+    // 本周作业未交次数（迟交也算没交口径之外的独立项，这里只数「未交」）；周内没有作业 → null
+    let homeworkMissed: number | null = null;
+    if (extras?.homework) {
+      const inWeek = extras.homework.filter((h) => h.date >= start && h.date <= end);
+      homeworkMissed = inWeek.reduce(
+        (n, h) => n + (h.records.find((r) => r.studentId === student.id)?.status === '未交' ? 1 : 0),
+        0,
+      );
+    }
+
     return {
       student,
       countByType,
@@ -121,6 +140,8 @@ export function weeklyRegister(
       total,
       rank,
       poolLabel,
+      attendanceLabel,
+      homeworkMissed,
     };
   });
 
