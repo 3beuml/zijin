@@ -45,7 +45,7 @@ describe('commit · sample-standard（外部验收的同一形状）', () => {
   it('每个学生都有导师（分包）', async () => {
     const { data } = await runStandard();
     expect(data.students.every((s) => s.advisor)).toBe(true);
-    expect(new Set(data.students.map((s) => s.advisor))).toEqual(new Set(['王子柔', '李迎莉']));
+    expect(new Set(data.students.map((s) => s.advisor))).toEqual(new Set(['王老师', '李老师']));
   });
 
   it('名次全部带池；数学按层内池、语文按年级池', async () => {

@@ -63,7 +63,7 @@
 ```json
 {
   "version": 1,
-  "students": [{ "id": "s1", "name": "张伟", "classId": "c1", "advisor": "王子柔" }],
+  "students": [{ "id": "s1", "name": "张伟", "classId": "c1", "advisor": "王老师" }],
   "exams":    [{ "id": "e1", "label": "期中", "date": "2026-11-11", "order": 2 }],
   "scores":   [{ "studentId": "s1", "examId": "e1", "subject": "数学",
                  "raw": 96, "rank": 5,

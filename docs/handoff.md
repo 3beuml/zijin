@@ -1,5 +1,9 @@
 # 交接单 —— 今晚只有一件事
 
+> 📦 **已归档（仅作历史）**。这是阶段 0 的任务交接单，任务范围早已被
+> `docs/handoff-full.md` 的阶段 1–24 取代；**当前状态请读 handoff-full.md 开头的快照**。
+> 这里保留的 T1「表格结构探测器」规格是导入管线的原始需求，仍有参考价值。
+
 > 读完 `AGENTS.md` 再读这份。今晚**只做 T1**，不要顺手做别的。
 
 ## 背景（30 秒）
@@ -94,18 +98,10 @@ node scripts/detect/cli.mjs reference/samples/sample-standard.xlsx
 - 不动物流/包名/Capacitor 配置
 - 不改 `reference/` 下的样例文件
 
-## 参考材料（只读，白名单）
+## 参考材料
 
-需要理解"真实表格长什么样"时，可以读这几个文件：
-
-```
-C:\Work\repos\teacher\docs\教师工作台-需求分析与方案.md
-C:\Work\repos\teacher\scripts\build_seed.py
-C:\Work\repos\teacher\README.md            （看 §3 数据来源、§4 测试）
-```
-
-**不要 `ls` / 不要进** 这些目录：`re/`、`shots/`、`app/dist/`。
-里面是真实学生数据，与任务无关。
+理解"真实表格长什么样"，以 `reference/samples/` 下的四份虚构样例为准
+（结构真实、数值虚构）。私有前身项目中的真实数据不在本仓库、也不得读取。
 
 ## 技术建议
 

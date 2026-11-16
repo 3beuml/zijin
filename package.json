@@ -1,7 +1,7 @@
 {
   "name": "zijin",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.2",
   "description": "子衿 —— 中学班主任/导师的本地优先工作台",
   "type": "module",
   "scripts": {
@@ -28,5 +28,6 @@
   },
   "allowScripts": {
     "esbuild@0.21.5": true
-  }
+  },
+  "license": "MIT"
 }
