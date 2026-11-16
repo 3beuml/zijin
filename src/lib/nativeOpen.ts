@@ -7,10 +7,15 @@
  */
 import { registerPlugin, Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import { tablesFromBuffer, type SheetTable } from './xlsx.ts';
+import { isNewerVersion } from './version.ts';
 
 interface OpenFileNative {
   /** 冷启动文件；读不出来但有打开意图时返回 { error } */
   getInitialFile(): Promise<{ name?: string; base64?: string; error?: string } | undefined>;
+  /** 应用自身版本（更新检查用） */
+  getAppVersion(): Promise<{ versionName?: string; versionCode?: number } | undefined>;
+  /** 用系统浏览器打开外部链接 */
+  openUrl(options: { url: string }): Promise<void>;
   addListener(
     eventName: 'fileOpened',
     cb: (file: { name?: string; base64?: string }) => void,
@@ -22,6 +27,57 @@ interface OpenFileNative {
 }
 
 const OpenFile = registerPlugin<OpenFileNative>('OpenFile');
+
+const REPO_RELEASES = 'https://github.com/3beuml/zijin/releases';
+const LATEST_API = 'https://api.github.com/repos/3beuml/zijin/releases/latest';
+
+export interface AppVersion {
+  versionName: string;
+  versionCode: number;
+}
+export interface UpdateInfo {
+  versionName: string; // Release 标签，如 'v1.0.4'
+  url: string; // Releases 页
+}
+
+export async function getAppVersion(): Promise<AppVersion | undefined> {
+  if (!nativeOpenAvailable()) return undefined;
+  try {
+    const v = await OpenFile.getAppVersion();
+    if (!v || typeof v.versionCode !== 'number') return undefined;
+    return { versionName: v.versionName ?? '', versionCode: v.versionCode };
+  } catch {
+    return undefined;
+  }
+}
+
+export async function openExternal(url: string): Promise<void> {
+  if (!nativeOpenAvailable()) {
+    window.open(url, '_blank');
+    return;
+  }
+  await OpenFile.openUrl({ url });
+}
+
+/** 向 GitHub 查询最新 Release；网络不可用或解析失败返回 undefined */
+export async function fetchLatestRelease(): Promise<UpdateInfo | undefined> {
+  if (!nativeOpenAvailable()) return undefined;
+  try {
+    const resp = await fetch(LATEST_API, { headers: { Accept: 'application/vnd.github+json' } });
+    if (!resp.ok) return undefined;
+    const j = (await resp.json()) as { tag_name?: string; html_url?: string };
+    const tag = String(j.tag_name ?? '').trim();
+    if (!tag) return undefined;
+    return { versionName: tag, url: j.html_url ?? REPO_RELEASES };
+  } catch {
+    return undefined;
+  }
+}
+
+/** 应用是否需要更新：latest 的版本号比当前新 */
+export function updateNeeded(currentVersionName: string, latestTag: string): boolean {
+  return isNewerVersion(currentVersionName, latestTag);
+}
 
 export interface OpenedNativeFile {
   name: string;

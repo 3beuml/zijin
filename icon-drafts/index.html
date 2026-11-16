@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>子衿 · 印章图标候选(方向 B)</title>
+<style>
+  /* 用本机已安装字体,通过 local() 起别名 */
+  @font-face { font-family:"f-li";       src: local("隶书"), local("LiSu"), local("SimLi"); }
+  @font-face { font-family:"f-liti";     src: local("华文隶书"), local("STLiti"); }
+  @font-face { font-family:"f-xingkai";  src: local("华文行楷"), local("STXingkai"); }
+  @font-face { font-family:"f-xinwei";   src: local("华文新魏"), local("STXinwei"); }
+  @font-face { font-family:"f-kaiti";    src: local("华文楷体"), local("STKaiti"); }
+  @font-face { font-family:"f-songh";    src: local("Source Han Serif SC Heavy"), local("思源宋体 Heavy"), local("Source Han Serif SC"), local("思源宋体"); font-weight:900; }
+  @font-face { font-family:"f-zhongsong";src: local("华文中宋"), local("STZhongsong"); }
+  @font-face { font-family:"f-simhei";   src: local("黑体"), local("SimHei"); }
+  @font-face { font-family:"f-shuti";    src: local("方正舒体"), local("FZShuTi"); }
+
+  :root {
+    --indigo-700: #2C4A63;
+    --indigo-500: #456B85;
+    --paper:      #FBF9F5;
+    --line:       #E7E2D9;
+    --ink-900:    #1F2328;
+    --ink-600:    #5C6166;
+    --dark-wall:  #2B2F36; /* 模拟深色壁纸 */
+  }
+  html,body { background:#F3F1EC; color:var(--ink-900);
+    font-family:"Noto Sans SC","Microsoft YaHei",sans-serif; margin:0; padding:24px 32px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .sub { color:var(--ink-600); font-size:13px; margin-bottom:24px; }
+  h2 { font-size:15px; margin:28px 0 12px; }
+
+  .row { background:#fff; border:1px solid var(--line); border-radius:12px;
+    padding:16px 20px; margin-bottom:14px; display:flex; align-items:center; gap:24px; }
+  .row .meta { width:150px; flex:none; }
+  .row .meta b { font-size:16px; display:block; }
+  .row .meta span { font-size:12px; color:var(--ink-600); }
+
+  .stage { display:flex; gap:28px; align-items:flex-start; }
+  .cell { text-align:center; }
+  .cell .lbl { font-size:11px; color:var(--ink-600); margin-top:6px; }
+  .chip { display:inline-block; padding:8px; border-radius:10px; }
+
+  .on-paper   { background:var(--paper); }
+  .on-dark    { background:var(--dark-wall); }
+  .on-indigo  { background:var(--indigo-700); }
+
+  svg.icon { display:block; }
+  .mask-circle   { border-radius:50%; }
+  .mask-squircle { border-radius:26%; }
+
+  .s192 svg.icon { width:192px; height:192px; }
+  .s96  svg.icon { width:96px;  height:96px; }
+  .s48  svg.icon { width:48px;  height:48px; }
+</style>
+</head>
+<body>
+<h1>子衿 · 印章图标候选(方向 B,多字体)</h1>
+<div class="sub">同一字形 × 两种印式:「靛底纸字」(阴文) / 「纸底靛字」(阳文带框)。字体均为本机已安装字体,渲染仅供选型。</div>
+
+<section>
+  <h2>浅色环境(纸面壁纸)</h2>
+  <div id="light-rows"></div>
+</section>
+
+<section>
+  <h2>深色环境(深灰壁纸,检查对比度)</h2>
+  <div id="dark-rows"></div>
+</section>
+
+<script>
+const INDIGO = '#2C4A63', PAPER = '#FBF9F5';
+
+const FONTS = [
+  { id:'li',        name:'隶书',        file:'SIMLI.TTF',      css:'f-li',        fs:54, dy:0  },
+  { id:'liti',      name:'华文隶书',    file:'STLITI.TTF',     css:'f-liti',      fs:56, dy:0  },
+  { id:'xingkai',   name:'华文行楷',    file:'STXINGKA.TTF',   css:'f-xingkai',   fs:58, dy:0  },
+  { id:'xinwei',    name:'华文新魏',    file:'STXINWEI.TTF',   css:'f-xinwei',    fs:56, dy:0  },
+  { id:'kaiti',     name:'华文楷体',    file:'STKAITI.TTF',    css:'f-kaiti',     fs:56, dy:0  },
+  { id:'songh',     name:'思源宋体 Heavy',file:'Source Han Serif SC Heavy.ttf', css:'f-songh', fs:56, dy:0 },
+  { id:'zhongsong', name:'华文中宋',    file:'STZHONGS.TTF',   css:'f-zhongsong', fs:56, dy:0  },
+  { id:'simhei',    name:'黑体',        file:'simhei.ttf',     css:'f-simhei',    fs:56, dy:0  },
+  { id:'shuti',     name:'方正舒体',    file:'FZSTK.TTF',      css:'f-shuti',     fs:56, dy:0  },
+];
+
+// 印式:1 阴文(靛底纸字) 2 阳文(纸底靛字 + 细框)
+function iconSVG(f, style, extraCls) {
+  let bg, glyph, frame = '';
+  if (style === 1) { bg = INDIGO; glyph = PAPER; }
+  else { bg = PAPER; glyph = INDIGO;
+         frame = `<rect x="7" y="7" width="94" height="94" rx="24" fill="none" stroke="${INDIGO}" stroke-width="3"/>`; }
+  return `<svg class="icon ${extraCls||''}" viewBox="0 0 108 108" xmlns="http://www.w3.org/2000/svg">
+    <rect width="108" height="108" rx="0" fill="${bg}"/>
+    ${frame}
+    <text x="54" y="${54 + (f.dy||0)}" text-anchor="middle" dominant-baseline="central"
+      font-family="${f.css}" font-size="${f.fs}" fill="${glyph}">衿</text>
+  </svg>`;
+}
+
+function rowHTML(f, dark) {
+  const wallCls = dark ? 'on-dark' : 'on-paper';
+  return `<div class="row">
+    <div class="meta"><b>${f.name}</b><span>${f.file}</span></div>
+    <div class="stage">
+      <div class="cell s192">${iconSVG(f,1)}
+        <div class="lbl">阴文 · 192</div></div>
+      <div class="cell s192">${iconSVG(f,2)}
+        <div class="lbl">阳文 · 192</div></div>
+      <div class="chip ${wallCls}">
+        <div class="cell s96"><div class="mask-circle">${iconSVG(f,1)}</div>
+          <div class="lbl" style="color:${dark?'#c9cdd3':'inherit'}">圆形遮罩 · 96</div></div>
+      </div>
+      <div class="chip ${wallCls}">
+        <div class="cell s96"><div class="mask-squircle">${iconSVG(f,2)}</div>
+          <div class="lbl" style="color:${dark?'#c9cdd3':'inherit'}">方圆遮罩 · 96</div></div>
+      </div>
+      <div class="chip ${wallCls}">
+        <div class="cell s48"><div class="mask-circle">${iconSVG(f,1)}</div>
+          <div class="lbl" style="color:${dark?'#c9cdd3':'inherit'}">桌面 48</div></div>
+        <div class="cell s48"><div class="mask-circle">${iconSVG(f,2)}</div></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+document.getElementById('light-rows').innerHTML = FONTS.map(f=>rowHTML(f,false)).join('');
+document.getElementById('dark-rows').innerHTML  = FONTS.map(f=>rowHTML(f,true)).join('');
+</script>
+</body>
+</html>

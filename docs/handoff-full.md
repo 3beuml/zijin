@@ -517,3 +517,24 @@ node scripts/accept.mjs dump.json
 - 验证：135 单测 + build 通过；真机分享面板实测因手机断开未跑（与 Excel 导出同一机制，
   Web Share files 在 Chrome/WebView 75+ 支持），**留待用户手机点一次「导出备份 JSON」确认**。
 - 版本：versionName 1.0.2 / versionCode 8。交付 子衿-v1.0.2-release.apk。
+
+## 阶段 25 完成（v1.0.3 · 项目主页 + 版本检查与红点提示）
+- 背景：仓库已开源（github.com/3beuml/zijin，MIT）。用户要求：应用内留项目地址、下载入口、
+  更新检查（有新版红点提示）。经确认采用「零权限保留 + 手动/启动检查」折中。
+- 实际做了什么：
+  - Manifest 重新申请 INTERNET 权限（唯一用途：启动时向 GitHub 查询最新 Release 版本号）；
+  - OpenFilePlugin 新增 getAppVersion / openUrl 两个方法；
+  - nativeOpen.ts 增加版本查询与 GitHub Releases API 拉取；「我的」页新增「关于」卡
+    （当前版本、项目主页、Releases 入口、检查更新按钮、发现新版横幅）；
+    有新版本时「我的」标签显示红点，点击链接用系统浏览器打开。
+  - 隐私承诺改写：README / 使用说明 / SECURITY 同步为「唯一外联请求是 GitHub 版本检查，
+    不传输任何学生数据」。
+- 过程中抓到两个真 bug：①启动器图标矢量前景 Flyme 渲染失败（阶段 23 已修，本阶段发现于真机）；
+  ②**版本比较逻辑错误**——从 tag「v1.0.3」末尾解析数字 3 当 versionCode 与本机 9 比较
+  （且参数序传反），导致误报红点、真实更新反而不提示。修复：语义版本比较函数
+  `src/lib/version.ts`（parseVersion / isNewerVersion，纯函数 + 3 个单测），
+  比较对象改为 versionName 与 Release 标签。
+- 真机验证：冷启动检查 → 「我的」标签红点 + 关于卡横幅（发现新版本 v1.0.3）✓；
+  修复后同版本对比 → 无红点、「检查更新」显示「已是最新版本。」✓；
+  关于卡链接（项目主页 / Releases）点击跳系统浏览器 ✓。
+- 版本：versionName 1.0.3 / versionCode 9。Release v1.0.3 资产已替换为修复版 APK。

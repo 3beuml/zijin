@@ -1572,3 +1572,37 @@ textarea {
   color: var(--ink-400);
   padding: 0 var(--space-1);
 }
+
+/* ---- v1.0.3 · 更新提示 ---- */
+.tab-dot {
+  position: absolute;
+  top: 6px;
+  right: calc(50% - 22px);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+}
+
+.tabbar-item {
+  position: relative;
+}
+
+.update-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+  flex-shrink: 0;
+}
+
+.update-btn {
+  width: 100%;
+  margin-bottom: var(--space-2);
+}
+
+.about-links li {
+  display: flex;
+  align-items: center;
+  padding: var(--space-1) 0;
+}

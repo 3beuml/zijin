@@ -13,7 +13,7 @@ import { map } from '../domain/import/map.ts';
 import { commit } from '../domain/import/commit.ts';
 import type { ImportMapping } from '../domain/import/types.ts';
 import { tablesFromBuffer, type SheetTable } from '../lib/xlsx.ts';
-import { onNativeFile } from '../lib/nativeOpen.ts';
+import { onNativeFile, getAppVersion, fetchLatestRelease, openExternal, updateNeeded, type UpdateInfo } from '../lib/nativeOpen.ts';
 import { HomeScreen } from './screens/HomeScreen';
 import { StudentsScreen } from './screens/StudentsScreen';
 import { StudentDetail } from './screens/StudentDetail';
@@ -83,7 +83,25 @@ export default function App() {
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
   const [importResult, setImportResult] = useState<{ fileName: string; report: Awaited<ReturnType<typeof commit>>['report'] } | null>(null);
   const [sheetPick, setSheetPick] = useState<{ fileName: string; sheets: SheetTable[] } | null>(null);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
+
+  /** 检查更新：比较 GitHub 最新 Release 与本机 versionCode。启动时自动一次，「关于」卡可手动重查 */
+  const checkUpdate = async (): Promise<'new' | 'latest' | 'error'> => {
+    const app = await getAppVersion();
+    if (!app) return 'error';
+    const latest = await fetchLatestRelease();
+    if (!latest) return 'error';
+    if (updateNeeded(app.versionName, latest.versionName)) {
+      setUpdateInfo(latest);
+      return 'new';
+    }
+    setUpdateInfo(null);
+    return 'latest';
+  };
+  useEffect(() => {
+    void checkUpdate();
+  }, []);
 
   useEffect(() => {
     loadData().then((d) => {
@@ -247,6 +265,9 @@ export default function App() {
             onGoExams={() => setExamsOpen(true)}
             onGoRecords={() => setRecordsOpen(true)}
             onGoImport={openImportPicker}
+            updateInfo={updateInfo}
+            onCheckUpdate={checkUpdate}
+            onOpenExternal={openExternal}
           />
         )}
       </main>
@@ -460,6 +481,7 @@ export default function App() {
           <button className={`tabbar-item${tab === 'mine' ? ' active' : ''}`} onClick={() => setTab('mine')}>
             <IconMine size={22} />
             <span>我的</span>
+            {updateInfo && <span className="tab-dot" />}
           </button>
         </nav>
       )}

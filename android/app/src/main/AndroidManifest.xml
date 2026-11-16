@@ -59,5 +59,8 @@
         </provider>
     </application>
 
-    <!-- Permissions：本应用不联网，不申请任何权限（v1.0.0 移除了模板默认的 INTERNET 权限） -->
+    <!-- Permissions
+         v1.0.3 起重新申请 INTERNET 权限，唯一用途：启动时向 GitHub 查询最新版本号（检查更新）。
+         应用不传输任何学生数据；除此之外不访问网络。 -->
+    <uses-permission android:name="android.permission.INTERNET" />
 </manifest>

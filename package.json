@@ -1,7 +1,7 @@
 {
   "name": "zijin",
   "private": true,
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "子衿 —— 中学班主任/导师的本地优先工作台",
   "type": "module",
   "scripts": {

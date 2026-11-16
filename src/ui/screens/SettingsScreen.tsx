@@ -2,6 +2,7 @@
  * 我的：分包设置、周手册/成绩分析/全部记录入口、备份恢复、每日快照、清空。
  * 导入走 App 级触发（dock 中键与这里共用同一条流程）。
  * v0.6 加「作业登记」历史：每条可改（重开登记弹层）可删。
+ * v1.0.3 加「关于」卡：当前版本、项目主页、Releases 下载、检查更新（有新版时红点提示）。
  */
 import { useEffect, useRef, useState } from 'react';
 import type { AppData, Homework } from '../../domain/types.ts';
@@ -11,6 +12,7 @@ import { shareOrDownloadFile } from '../print.ts';
 import { todayStr } from '../util.ts';
 import { normalizeData, listSnapshots, type Snapshot } from '../../storage/db.ts';
 import { HomeworkSheet } from '../components/HomeworkSheet.tsx';
+import { getAppVersion, type UpdateInfo } from '../../lib/nativeOpen.ts';
 
 export function SettingsScreen({
   data,
@@ -20,6 +22,9 @@ export function SettingsScreen({
   onGoExams,
   onGoRecords,
   onGoImport,
+  updateInfo,
+  onCheckUpdate,
+  onOpenExternal,
 }: {
   data: AppData;
   onImported: (next: AppData) => Promise<void>;
@@ -28,15 +33,41 @@ export function SettingsScreen({
   onGoExams: () => void;
   onGoRecords: () => void;
   onGoImport: () => void;
+  /** App 层启动时检查到的待更新信息（null = 无新版或未检查） */
+  updateInfo: UpdateInfo | null;
+  /** 手动触发检查，返回结果供提示语使用 */
+  onCheckUpdate: () => Promise<'new' | 'latest' | 'error'>;
+  onOpenExternal: (url: string) => void;
 }) {
   const [report] = useState<string[] | null>(null);
   const restoreRef = useRef<HTMLInputElement>(null);
   const [wipeArmed, setWipeArmed] = useState(false);
   const [snaps, setSnaps] = useState<Snapshot[]>([]);
   const [hwEditing, setHwEditing] = useState<Homework | 'new' | null>(null);
+  const [appVer, setAppVer] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [checkResult, setCheckResult] = useState<string | null>(null);
   const advisors = distinctAdvisors(data.students);
   const nameOf = (id: string) => data.students.find((s) => s.id === id)?.name ?? '?';
   const homeworks = [...data.homework].sort((a, b) => b.date.localeCompare(a.date));
+
+  useEffect(() => {
+    void getAppVersion().then((v) => setAppVer(v?.versionName ?? null));
+  }, []);
+
+  const runCheck = async () => {
+    setChecking(true);
+    setCheckResult(null);
+    const r = await onCheckUpdate();
+    setChecking(false);
+    setCheckResult(
+      r === 'new'
+        ? '发现新版本，点上方按钮前往下载页。'
+        : r === 'latest'
+          ? '已是最新版本。'
+          : '检查失败：网络不可用，稍后再试。',
+    );
+  };
 
   useEffect(() => {
     listSnapshots()
@@ -242,11 +273,43 @@ export function SettingsScreen({
         <h2 className="card-title">数据</h2>
         <p className="muted">
           当前 {data.students.length} 名学生 · {data.exams.length} 场考试 · {data.records.length} 条记录。
-          数据只存在本机。当前版本 子衿 v1.0.2。
+          数据只存在本机。
         </p>
         <button className={`btn ${wipeArmed ? 'danger-solid' : 'danger'}`} onClick={wipe}>
           {wipeArmed ? '再点一次确认清空' : '清空全部数据…'}
         </button>
+      </section>
+
+      <section className="card">
+        <div className="card-title-row">
+          <h2 className="card-title">关于</h2>
+          {updateInfo && <span className="update-dot" aria-label="有新版本" />}
+        </div>
+        <p className="muted">
+          当前版本 子衿 v{appVer ?? '…'}。应用唯一的外联请求是启动时向 GitHub
+          查询最新版本号，不传输任何学生数据。
+        </p>
+        {updateInfo && (
+          <button className="btn primary update-btn" onClick={() => onOpenExternal(updateInfo.url)}>
+            发现新版本 {updateInfo.versionName}，前往下载页
+          </button>
+        )}
+        <ul className="plain-list about-links">
+          <li>
+            <button className="link-btn" onClick={() => onOpenExternal('https://github.com/3beuml/zijin')}>
+              项目主页（GitHub）
+            </button>
+          </li>
+          <li>
+            <button className="link-btn" onClick={() => onOpenExternal('https://github.com/3beuml/zijin/releases')}>
+              下载与更新（Releases）
+            </button>
+          </li>
+        </ul>
+        <button className="link-btn" disabled={checking} onClick={() => void runCheck()}>
+          {checking ? '检查中…' : '检查更新'}
+        </button>
+        {checkResult && <p className="muted">{checkResult}</p>}
       </section>
 
       {hwEditing && (
